@@ -1,0 +1,62 @@
+---
+title: Formato torke.run
+description: La especificación del archivo JSON de una corrida grabada, compartido por iOS, Android y tu servidor.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Una corrida grabada es un JSON con **todas las muestras crudas** y el resultado. TorkeKit para iOS y para Android leen y escriben el mismo archivo: una corrida grabada en una plataforma se analiza en la otra, en un servidor o en tus propias herramientas.
+
+Extensión: `.torkerun.json`.
+
+```json title="ejemplo.torkerun.json"
+{
+  "format": "torke.run",
+  "version": 1,
+  "recordedAt": "2026-11-21T16:54:06Z",
+  "device": "iPhone16,1",
+  "app": "Torke 1.0",
+  "motion": [
+    { "t": 1203.51, "user": [0.02, -0.11, 0.04], "gravity": [0.0, -0.34, 0.94] }
+  ],
+  "gps": [
+    { "t": 1203.8, "speed": 0.1, "speedAccuracy": 0.4,
+      "latitude": 9.9412, "longitude": -84.2005, "horizontalAccuracy": 3.2, "altitude": 912.4 }
+  ],
+  "result": {
+    "launchTime": 1205.52, "sixtyFeet": 2.21, "zeroTo100": 6.4,
+    "eighthMile": 8.93, "eighthMileKmh": 128.4,
+    "quarterMile": 13.86, "quarterMileKmh": 163.0,
+    "topSpeedKmh": 168.2, "accelBias": 0.04, "launchG": 0.61, "peakG": 0.64, "trace": []
+  },
+  "weather": { "temperatureC": 31, "humidity": 70, "pressureHpa": 910 }
+}
+```
+
+## Campos
+
+| Campo | Qué es |
+| --- | --- |
+| `format`, `version` | Siempre `"torke.run"` y `1`. Los lectores rechazan versiones más nuevas. |
+| `recordedAt` | ISO 8601. Opcional. |
+| `device`, `app` | Texto libre. Opcionales. |
+| `motion[].t` | Segundos en un reloj monótono compartido con `gps[].t` (iOS: `systemUptime`; Android: `elapsedRealtime`). |
+| `motion[].user` | Aceleración sin gravedad, m/s², en los ejes del teléfono `[x, y, z]`. |
+| `motion[].gravity` | Dirección de la gravedad en los ejes del teléfono `[x, y, z]` (cualquier largo). |
+| `gps[].speed`, `speedAccuracy` | m/s, una desviación estándar. `speedAccuracy ≥ 50` significa que el dato tiene posición pero no velocidad. |
+| `gps[].latitude`, `longitude`, `horizontalAccuracy` | Grados (WGS 84) y metros. Opcionales. |
+| `gps[].altitude` | Metros sobre el nivel del mar. Opcional (0.2). Se usa para revisar la pendiente. |
+| `result` | Opcional. Tiempos en segundos, velocidades en km/h. Los tiempos de distancia descuentan el pie de rollout. `trace` puede ir vacío. `launchG` y `peakG` (0.2) son opcionales. |
+| `interval` | Opcional (0.2): `{ "kind": "rolling" \| "braking", "fromKmh", "toKmh", "time", "distance", "peakG", "startTime" }`. |
+| `weather` | Opcional (0.2): `{ "temperatureC", "humidity", "pressureHpa" }`, presión de la estación. |
+| `suspension` | Opcional (0.2): `{ "kind": "fourLink" \| "ladderBar" \| "torqueArm", "unit": "inches" \| "centimeters", "wheelbase", "cgHeight", "points": { "upperRear": { "x", "y" }, … }, "notes" }`. |
+
+## Reglas
+
+- Los campos opcionales que faltan **no se escriben**, nunca van como `null`.
+- La versión 0.2 solo agregó campos opcionales: el formato sigue en la versión `1`, y los lectores de 0.1 leen archivos de 0.2.
+- Las muestras van en orden de tiempo. `motion` y `gps` comparten el mismo reloj, pero no tienen que empezar en cero.
+
+<Aside type="tip" title="Leerlo desde otro lenguaje">
+Es JSON simple: lo podés leer en Python, JavaScript o lo que uses. Para recalcular los tiempos con el motor oficial, usá `torke-kit` en cualquier JVM.
+</Aside>

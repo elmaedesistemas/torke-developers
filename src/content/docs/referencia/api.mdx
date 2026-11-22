@@ -1,0 +1,150 @@
+---
+title: API
+description: Todos los tipos públicos de TorkeKit en una página, con su nombre en Swift y en Kotlin.
+tableOfContents:
+  maxHeadingLevel: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Los nombres son los mismos en las dos plataformas, salvo donde la tabla dice otra cosa. En Kotlin los paquetes son `today.torke.kit.session`, `.engine`, `.input`, `.format`, `.analysis`, `.suspension` y `.sensors`.
+
+## Sesión
+
+### RunSession
+
+| Miembro | Swift | Kotlin |
+| --- | --- | --- |
+| Crear | `RunSession(options:)` | `RunSession(options)` |
+| Estado en vivo | `snapshot` (`@Observable`) | `snapshot: StateFlow<RunSnapshot>` |
+| Eventos | `events() -> AsyncStream<RunEvent>` | `events: Flow<RunEvent>` |
+| Leer una fuente | `start(with:)` | `start(provider, scope)` |
+| Leer hasta el final | `await run(with:)` | `suspend run(provider)` |
+| Armar | `arm(mode:)` | `arm(mode)` |
+| Cerrar / descartar / parar | `finish()`, `cancel()`, `stop()` | igual |
+| Error de la app | `fail(_:)` | `fail(failure)` |
+| Grabación | `recording(device:app:) -> TorkeRun` | `recording(device, app)` |
+| Muestra a mano | `process(_:) -> [RunEvent]` | `process(sample): List<RunEvent>` |
+
+### RunSnapshot
+
+`phase`, `speed`, `speedKmh`, `elapsed`, `distance`, `gpsAccuracy`, `location`, `startLocation`, `mode`, `result`, `interval`. Ver [La sesión en vivo](/guias/sesion/#qué-trae-el-snapshot).
+
+### RunPhase
+
+`idle`, `waitingStill`, `armed`, `running(start)`, `finished`, `failed(failure)`. En Kotlin con mayúscula: `RunPhase.Idle`, `RunPhase.Running(start)`…
+
+### RunMode
+
+| Swift | Kotlin | Qué mide |
+| --- | --- | --- |
+| `.standingStart` | `RunMode.StandingStart` | Arrancada desde parado (por defecto). |
+| `.rolling(fromKmh:toKmh:)` | `RunMode.Rolling(fromKmh, toKmh)` | Un tramo en movimiento. |
+| `.braking(fromKmh:)` | `RunMode.Braking(fromKmh)` | Un frenado hasta parar. |
+
+### RunEvent
+
+| Swift | Kotlin | Cuándo |
+| --- | --- | --- |
+| `.armed` | `RunEvent.Armed` | Quieto el tiempo suficiente. |
+| `.disarmed` | `RunEvent.Disarmed` | Se movió sin arrancar. |
+| `.launched(time:location:)` | `RunEvent.Launched` | Arrancó. |
+| `.passed(mark, elapsed:)` | `RunEvent.Passed` | Estimación en vivo de una marca. |
+| `.finished(result)` | `RunEvent.Finished` | Tiempos oficiales. |
+| `.intervalFinished(result)` | `RunEvent.IntervalFinished` | Terminó un tramo rodando o de frenado. |
+| `.failed(failure)` | `RunEvent.Failed` | No hubo corrida. |
+
+### RunFailure
+
+`noLaunch`, `noInterval`, `noMotionSensors`, `locationDenied`.
+
+### RunSessionOptions
+
+`stillWindow`, `stillAccel`, `stillSpeed`, `launchAccel`, `launchHoldAccel`, `launchHold`, `launchGrace`, `finishDistance`, `backOffRatio`, `maxDuration`, `analysisDistance`. Ver [Ajustar la detección](/guias/sesion/#ajustar-la-detección).
+
+## Resultados
+
+### RunResult
+
+| Campo | Unidad |
+| --- | --- |
+| `launchTime` | s, en el reloj de las muestras |
+| `sixtyFeet`, `zeroTo100`, `eighthMile`, `quarterMile` | s |
+| `eighthMileKmh`, `quarterMileKmh`, `topSpeedKmh` | km/h |
+| `launchG`, `peakG` | g |
+| `accelBias` | m/s², el sesgo que aprendió el filtro |
+| `trace` | `[TracePoint]`: `t`, velocidad y distancia |
+
+Extensiones: `zeroTo60mph`, `thousandFeet`, `halfMile`, `time(toKmh:)`, `time(fromKmh:toKmh:)`, `elapsed(toDistance:)`, `speedKmh(atDistance:)`, `corrected(for:)` (Kotlin: `corrected(weather)`).
+
+### IntervalResult
+
+`kind` (`rolling`, `braking`), `fromKmh`, `toKmh`, `time`, `distance`, `peakG`, `startTime`.
+
+### DragMark y DragDistance
+
+`DragMark`: `sixtyFeet`, `zeroTo100`, `eighthMile`, `quarterMile`.
+
+`DragDistance` (metros): `rollout`, `sixtyFeet`, `eighthMile`, `thousandFeet`, `quarterMile`, `halfMile`, y las velocidades `speed100`, `speed60mph`. En Kotlin en mayúsculas: `DragDistance.QUARTER_MILE`.
+
+## Fuentes de datos
+
+### RunDataProvider
+
+Un protocolo (interfaz en Kotlin) con un solo método: `samples()`, que entrega `SensorSample` en orden de tiempo. Implementalo para conectar tu propia fuente (un GPS externo, un registrador).
+
+### PhoneSensorProvider
+
+Los sensores del teléfono. iOS: `PhoneSensorProvider()` y `await requestPermission()`. Android: `PhoneSensorProvider(context)`, con `ACCESS_FINE_LOCATION` ya concedido.
+
+### RecordedRunProvider
+
+`RecordedRunProvider(run, speed:)`: `speed` 0 (por defecto) reproduce lo más rápido posible; 1, a la velocidad real. `RecordedRunProvider.demo(seed:)` es la corrida simulada.
+
+### Muestras
+
+| Tipo | Campos |
+| --- | --- |
+| `RawMotionSample` | `t`, `user` (aceleración sin gravedad, m/s²), `gravity` |
+| `GPSSample` | `t`, `speed`, `speedAccuracy`, `latitude`, `longitude`, `horizontalAccuracy`, `altitude` |
+| `Coordinate` | `latitude`, `longitude` |
+
+## Formato
+
+### TorkeRun
+
+`format`, `version`, `recordedAt`, `device`, `app`, `motion`, `gps`, `result`, `interval`, `weather`, `suspension`.
+
+Métodos: `analyze(stopDistance:)`, `rolling(fromKmh:toKmh:)`, `braking(fromKmh:)`, `quality()`, `startLocation`, `encoded()` / `TorkeRun.decode(_:)` (Kotlin: `encode()` / `TorkeRun.decode(text)`). Ver [Formato torke.run](/referencia/formato/).
+
+## Análisis
+
+### Weather
+
+`Weather(temperatureC:humidity:pressureHpa:)`. Propiedades: `vaporPressureHpa`, `dryPressureHpa`, `airDensity`, `densityAltitude`, `correctionFactor`. Métodos: `corrected(time:)`, `corrected(speed:)` (Kotlin: `correctedTime`, `correctedSpeed`).
+
+### PowerEstimate
+
+`fromTrapSpeed(massKg:quarterMileKmh:)`, `fromElapsedTime(massKg:quarterMile:)`, `wheelPower(_:massKg:dragArea:rollingResistance:airDensity:) -> [PowerPoint]`, `peakWheelHp(…)`. `PowerPoint`: `t`, `speedKmh`, `watts`.
+
+### RunQuality
+
+`grade` (`good`, `fair`, `poor`), `issues`, `gpsRate`, `speedAccuracy`, `longestGpsGap`, `slope`, `tiltChange`, `disagreement`. `RunQuality.assess(run, limits:)` con `RunQuality.Limits`. Ver [Calidad de la corrida](/guias/calidad/).
+
+## Suspensión
+
+| Tipo | Qué es |
+| --- | --- |
+| `SuspensionSetup` | `kind` (`fourLink`, `ladderBar`, `torqueArm`), `unit`, `wheelbase`, `cgHeight`, `points`, `notes`. Constructores `fourLink`, `ladderBar`, `torqueArm`; `converted(to:)`, `geometry()`. |
+| `SuspensionGeometry` | `instantCenter`, `icLength`, `icHeight`, `antiSquat`, `bars`, `warnings`. |
+| `Bar` | `name`, `rear`, `front`, `angle`, `length`. |
+| `Point2`, `LengthUnit` | Un punto `x`, `y`; `inches` o `centimeters`. |
+| `ValueRange` | `min`, `max`, `contains`, `miss`. |
+| `TargetWindow` | `icLength`, `icHeight`, `antiSquat`, `nearShare`; `status(_:of:)`, `score(_:)`. |
+| `FourLinkHoles` | Los hoyos de cada soporte; `ranked(base:target:limit:) -> [HoleOption]`. |
+| `HoleOption` | `holes`, `setup`, `geometry`, `score`. |
+| `SetupChange` | `icLength`, `icHeight`, `antiSquat`, `moved`. Swift: `SetupChange(from:to:)`; Kotlin: `SetupChange.between(before, after)`. |
+
+<Aside type="tip">
+La documentación de cada símbolo también está en el código: en Xcode con ⌥ + clic, en Android Studio con F1.
+</Aside>

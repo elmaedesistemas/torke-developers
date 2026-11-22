@@ -1,0 +1,153 @@
+---
+title: La sesión en vivo
+description: Cómo RunSession pasa de quieto a armado, arranque y resultado, qué trae el snapshot, qué eventos llegan y cómo ajustar la detección.
+---
+
+import { TabItem, Tabs, Aside } from '@astrojs/starlight/components';
+import SessionPhases from '../../../components/SessionPhases.astro';
+
+`RunSession` es el corazón de TorkeKit. Recibe muestras del acelerómetro y del GPS y decide tres cosas: **cuándo el carro está quieto, cuándo arrancó y cuándo terminó**. Vos solo llamás `arm()` y escuchás.
+
+## Las fases
+
+<SessionPhases />
+
+## Snapshot y eventos
+
+La sesión te habla de dos maneras, y cada una sirve para algo distinto:
+
+| | Snapshot | Eventos |
+| --- | --- | --- |
+| **Qué es** | El estado de ahora: fase, velocidad, tiempo, distancia | Lo que pasó, una sola vez y en orden |
+| **Para qué** | Dibujar la pantalla | Sonidos, vibración, guardar la corrida |
+| **Cómo se lee** | <span>Swift: `session.snapshot` (`@Observable`)<br/>Kotlin: `session.snapshot` (`StateFlow`)</span> | <span>Swift: `for await e in session.events()`<br/>Kotlin: `session.events.collect { }`</span> |
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+// SwiftUI se redibuja solo cuando cambia el snapshot.
+Text("\(Int(session.snapshot.speedKmh)) km/h")
+Text(String(format: "%.2f s · %.0f m", session.snapshot.elapsed, session.snapshot.distance))
+
+// Los eventos, en una tarea aparte.
+for await event in session.events() {
+    switch event {
+    case .armed:                      play(.ready)
+    case .disarmed:                   show("Se movió antes de salir")
+    case .launched(_, let location):  startLocation = location
+    case .passed(let mark, let t):    show("\(mark) ≈ \(t) s")
+    case .finished(let result):       save(session.recording())
+    case .intervalFinished(let r):    show("\(r.time) s")
+    case .failed(let failure):        show(failure)
+    }
+}
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+// En Compose, el snapshot es un StateFlow.
+val snapshot by session.snapshot.collectAsState()
+Text("${snapshot.speedKmh.toInt()} km/h")
+Text("%.2f s · %.0f m".format(snapshot.elapsed, snapshot.distance))
+
+// Los eventos, en una corrutina aparte.
+session.events.collect { event ->
+    when (event) {
+        RunEvent.Armed -> play(Sound.Ready)
+        RunEvent.Disarmed -> show("Se movió antes de salir")
+        is RunEvent.Launched -> startLocation = event.location
+        is RunEvent.Passed -> show("${event.mark} ≈ ${event.elapsed} s")
+        is RunEvent.Finished -> save(session.recording())
+        is RunEvent.IntervalFinished -> show("${event.result.time} s")
+        is RunEvent.Failed -> show(event.failure)
+    }
+}
+```
+
+</TabItem>
+</Tabs>
+
+<Aside type="note" title="En vivo vs. oficial">
+Las marcas de `passed` son una estimación rápida con el GPS, para mostrar algo mientras el carro corre. Los tiempos **oficiales** llegan en `finished`: se calculan al final con todas las muestras del acelerómetro y el GPS juntas, y son los que tenés que guardar.
+</Aside>
+
+## Qué trae el snapshot
+
+| Campo | Qué es |
+| --- | --- |
+| `phase` | La fase actual (ver arriba). |
+| `speed` / `speedKmh` | Velocidad del GPS en m/s y en km/h. |
+| `elapsed` | Segundos desde el arranque. |
+| `distance` | Metros desde el arranque, estimación en vivo. |
+| `gpsAccuracy` | Precisión horizontal del último dato del GPS, en metros. |
+| `location` | Última posición conocida. |
+| `startLocation` | Dónde arrancó. Mandalo a tu servidor para decidir si la corrida cuenta. |
+| `mode` | Arrancada, rodando o frenado. |
+| `result` | Los tiempos oficiales, cuando la fase es *finished* (arrancada). |
+| `interval` | El resultado de un tramo rodando o de frenado. |
+
+## Controlar la sesión
+
+| Llamada | Qué hace |
+| --- | --- |
+| `start(…)` | Empieza a leer una fuente en segundo plano. Antes de `arm()` sirve de vista previa del GPS. |
+| `arm(mode:)` | Empieza a grabar. Por defecto, arrancada desde parado. |
+| `finish()` | Cierra la corrida ya y calcula los tiempos. Sin arranque, falla con `noLaunch`. |
+| `cancel()` | Descarta la corrida y vuelve a *idle*. |
+| `stop()` | Deja de leer la fuente. Una corrida en curso se cancela. |
+| `fail(_:)` | Marca la corrida como fallida por un error que encontró tu app (permisos, sensores). |
+| `recording()` | Todo lo grabado desde `arm()`, listo para guardar. Ver [Corridas grabadas](/guias/corridas-grabadas/). |
+| `process(_:)` | Le da una muestra a mano y devuelve los eventos que produjo. Útil con tu propia fuente. |
+
+La corrida termina sola cuando pasa el cuarto de milla (más 25 m), cuando la velocidad cae bajo el 60 % del pico (el piloto levantó el pie) o a los 40 segundos.
+
+## Ajustar la detección
+
+Los valores por defecto están pensados para un teléfono en un soporte rígido. Si tu caso es distinto, cambialos con `RunSessionOptions`:
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+var options = RunSessionOptions()
+options.finishDistance = DragDistance.halfMile + 25     // para la media milla…
+options.analysisDistance = DragDistance.halfMile + 20   // …y que la lea
+options.maxDuration = 60
+let session = RunSession(options: options)
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val session = RunSession(
+    RunSessionOptions(
+        finishDistance = DragDistance.HALF_MILE + 25,     // para la media milla…
+        analysisDistance = DragDistance.HALF_MILE + 20,   // …y que la lea
+        maxDuration = 60.0,
+    )
+)
+```
+
+</TabItem>
+</Tabs>
+
+| Opción | Por defecto | Qué controla |
+| --- | --- | --- |
+| `stillWindow` | 1 s | Cuánto tiene que estar quieto antes de armar. |
+| `stillAccel` | 0,6 m/s² | Aceleración bajo la cual cuenta como quieto. |
+| `stillSpeed` | 1,5 m/s | Velocidad del GPS bajo la cual cuenta como parado. |
+| `launchAccel` | 2,0 m/s² | Aceleración que marca un arranque… |
+| `launchHoldAccel` / `launchHold` | 1,4 m/s² / 0,15 s | …si se sostiene sobre este valor durante este tiempo. |
+| `launchGrace` | 0,35 s | Un movimiento que no se volvió arranque en este tiempo desarma. |
+| `finishDistance` | 1/4 + 25 m | Distancia a la que termina sola. |
+| `backOffRatio` | 0,6 | Termina si la velocidad cae bajo esta fracción del pico. |
+| `maxDuration` | 40 s | Duración máxima. |
+| `analysisDistance` | 1/4 + 20 m | Hasta dónde lee el análisis final. |
+
+<Aside type="caution">
+`RunSession` no es segura entre hilos: alimentala desde uno solo. En iOS vive en el `MainActor`; en Android, recolectá en el mismo `scope`.
+</Aside>

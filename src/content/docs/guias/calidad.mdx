@@ -1,0 +1,100 @@
+---
+title: Calidad de la corrida
+description: Cada corrida recibe una nota (buena, regular o mala) con los motivos. Qué revisa TorkeKit, cómo se decide la nota y cómo mostrarla.
+---
+
+import { TabItem, Tabs, Aside } from '@astrojs/starlight/components';
+
+Un teléfono no es un cronómetro de pista. Si el GPS se cortó, el soporte se movió o la pista tiene pendiente, el tiempo puede estar mal. `RunQuality` revisa la corrida y le pone una **nota con los motivos**, para que tu app sepa cuánto confiar en el número.
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+guard let quality = run.quality() else { return }   // nulo si no hubo arrancada
+
+switch quality.grade {
+case .good: badge = "Confiable"
+case .fair: badge = "Revisá: \(quality.issues.map(\.rawValue).joined(separator: ", "))"
+case .poor: badge = "No cuenta para el ranking"
+}
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val quality = run.quality() ?: return   // nulo si no hubo arrancada
+
+badge = when (quality.grade) {
+    RunQuality.Grade.good -> "Confiable"
+    RunQuality.Grade.fair -> "Revisá: ${quality.issues.joinToString()}"
+    RunQuality.Grade.poor -> "No cuenta para el ranking"
+}
+```
+
+</TabItem>
+</Tabs>
+
+## Qué revisa
+
+| Motivo | Qué pasó | Límite | Qué decirle al usuario |
+| --- | --- | --- | --- |
+| `slowGPS` | Menos de un dato de GPS por segundo | 0,8 por s | «El GPS iba lento. Probá con cielo abierto.» |
+| `inaccurateGPS` | La velocidad del GPS venía imprecisa | 1,0 m/s | «Señal de GPS débil.» |
+| `gpsDropout` | El GPS se calló un rato | 2,5 s | «Se perdió el GPS durante la corrida.» |
+| `slope` | La pista sube o baja | 1 % | «La pista tiene pendiente: el tiempo no es comparable.» |
+| `looseMount` | El acelerómetro terminó con mucho sesgo | 0,5 m/s² | «Revisá el soporte: parece flojo o muy inclinado.» |
+| `phoneMoved` | El teléfono cambió de ángulo | 8° | «El teléfono se movió en el soporte.» |
+| `sensorsDisagree` | El acelerómetro y el GPS dan velocidades distintas | 1,5 m/s | «Los sensores no coinciden.» |
+
+La pendiente solo se revisa si las muestras del GPS traen altitud (la traen las corridas grabadas desde la versión 0.2).
+
+## Cómo se decide la nota
+
+- **Buena:** ningún motivo.
+- **Regular:** uno o dos motivos leves (`slowGPS`, `inaccurateGPS`, `slope`, `looseMount`).
+- **Mala:** cualquier motivo grave (`gpsDropout`, `phoneMoved`, `sensorsDisagree`) o tres motivos o más.
+
+## Los números detrás
+
+Además de la nota, `RunQuality` trae lo que midió, por si querés mostrarlo o usar tus propios criterios:
+
+| Campo | Qué es |
+| --- | --- |
+| `gpsRate` | Datos del GPS por segundo durante la corrida. |
+| `speedAccuracy` | Mediana de la precisión de velocidad del GPS, m/s. |
+| `longestGpsGap` | El tramo más largo sin GPS, en segundos. |
+| `slope` | Pendiente de la pista (positiva es subida). |
+| `tiltChange` | Cuánto cambió el ángulo del teléfono, en grados. |
+| `disagreement` | Diferencia cuadrática media entre la velocidad filtrada y la del GPS, m/s. |
+
+## Tus propios límites
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+var limits = RunQuality.Limits()
+limits.maxSlope = 0.005          // más estricto: 0,5 %
+limits.minGpsRate = 4            // exigí un GPS externo de 5 Hz o más
+let quality = RunQuality.assess(run, limits: limits)
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val limits = RunQuality.Limits(
+    maxSlope = 0.005,            // más estricto: 0,5 %
+    minGpsRate = 4.0,            // exigí un GPS externo de 5 Hz o más
+)
+val quality = RunQuality.assess(run, limits)
+```
+
+</TabItem>
+</Tabs>
+
+<Aside type="tip" title="Para un ranking">
+Una regla razonable: solo cuentan las corridas **buenas** hechas en una pista o un evento aprobado (con `startLocation`). Recalculá la nota en tu servidor con la grabación, no confíes en la que manda la app.
+</Aside>

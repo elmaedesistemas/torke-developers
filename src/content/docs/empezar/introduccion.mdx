@@ -1,0 +1,57 @@
+---
+title: Qué es TorkeKit
+description: Un SDK abierto que convierte el teléfono en un cronómetro de piques. Qué mide, en qué plataformas corre y qué no hace.
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+**TorkeKit** convierte el teléfono en un cronómetro de piques. Lee el acelerómetro y el GPS mientras el carro sale y entrega los mismos tiempos que imprime la pista: 60 pies, 1/8 y 1/4 de milla con su velocidad, y 0 a 100 km/h.
+
+Es el motor que usa la app [Torke](https://torke.today) en Costa Rica, abierto con licencia Apache 2.0 para quien quiera construir apps de cronometraje, herramientas para pistas o productos para carros.
+
+## Qué mide
+
+| Qué | Ejemplos |
+| --- | --- |
+| **Arrancada desde parado** | 60 pies, 1/8 y 1/4 de milla con velocidad de trampa, 0 a 100 km/h, 0 a 60 mph, 1000 pies, media milla, cualquier tramo de velocidad (100 a 200 km/h). |
+| **Tramos en movimiento** | Rodando (60 a 130 km/h) y frenado (100 a 0 km/h). |
+| **Fuerzas** | g en la salida y g máxima. |
+| **Ambiente** | Altitud de densidad y corrección de tiempos a aire estándar (SAE J1349). |
+| **Potencia** | Caballos estimados por la velocidad de trampa y curva de potencia en las ruedas. |
+| **Confianza** | Una nota por corrida (buena, regular, mala) con los motivos: GPS lento, pendiente, soporte flojo… |
+| **Suspensión** | Centro instantáneo, anti-squat y ángulos de 4-link, ladder bar y torque arm. |
+
+## Dónde corre
+
+<CardGrid>
+	<Card title="iOS" icon="apple">
+		Swift, iOS 17 o más. El núcleo (`TorkeKit`) corre también en macOS 14; los sensores van en `TorkeKitSensors`.
+	</Card>
+	<Card title="Android" icon="mobile-android">
+		Kotlin, `minSdk 26`. El núcleo (`torke-kit`) no tiene código de Android: corre en cualquier JVM, también en un
+		servidor.
+	</Card>
+</CardGrid>
+
+Las dos versiones tienen **la misma API y dan los mismos números**. Una corrida grabada en un iPhone se analiza igual en Android o en tu servidor: las pruebas de las dos leen los mismos archivos de referencia y tienen que coincidir.
+
+## Las tres piezas
+
+Cualquier integración usa las mismas tres cosas:
+
+1. **Una fuente de datos** (`RunDataProvider`): los sensores del teléfono (`PhoneSensorProvider`), una corrida grabada (`RecordedRunProvider`) o la corrida simulada (`RecordedRunProvider.demo()`).
+2. **Una sesión** (`RunSession`): decide cuándo el carro está quieto, cuándo arrancó y cuándo terminó.
+3. **Eventos y snapshot**: los eventos avisan lo que pasa una vez (armado, arranque, resultado); el snapshot es el estado en vivo para la pantalla.
+
+## Qué no hace
+
+- **No decide si una corrida es legal.** Te da dónde arrancó (`startLocation`); tu servidor decide si fue en una pista o en un evento con permiso.
+- **No trae ranking ni antitrampa.** Eso vive en el servidor de cada producto.
+- **No trae valores de suspensión de nadie.** Las ventanas objetivo las ponés vos.
+
+## Seguí por acá
+
+<CardGrid>
+	<LinkCard title="Instalación" description="Agregá el paquete a tu app." href="/empezar/instalacion/" />
+	<LinkCard title="Tu primera corrida" description="Medí la corrida simulada en diez líneas." href="/empezar/primera-corrida/" />
+</CardGrid>

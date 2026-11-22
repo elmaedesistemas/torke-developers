@@ -1,0 +1,48 @@
+---
+title: Cómo funciona
+description: Del acelerómetro y el GPS a una boleta de tiempos. Calibración de ejes, filtro de Kalman y análisis de la corrida, explicados sin fórmulas.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+El GPS de un teléfono da **un dato por segundo**, y un 60 pies dura dos. Con el GPS solo, el tiempo sale con errores de medio segundo. El acelerómetro mide **cien veces por segundo**, pero se desvía y no sabe hacia dónde es "adelante". TorkeKit junta los dos y se queda con lo mejor de cada uno.
+
+<div class="tk-flow not-content">
+	<div><small>Entrada</small><b>Sensores</b><span>Acelerómetro a 100 Hz y GPS a 1 Hz o más, en el mismo reloj.</span></div>
+	<div><small>Paso 1</small><b>AxisCalibration</b><span>Quita la gravedad y aprende hacia dónde es adelante.</span></div>
+	<div><small>Paso 2</small><b>SpeedFilter</b><span>Kalman: integra la aceleración y la corrige con el GPS.</span></div>
+	<div><small>Paso 3</small><b>RunAnalyzer</b><span>Encuentra el arranque y lee las marcas.</span></div>
+</div>
+
+## 1. Saber hacia dónde es adelante
+
+El teléfono puede ir en cualquier posición: vertical, acostado, inclinado hacia el piloto. `AxisCalibration` usa el vector de gravedad para quedarse solo con la parte **horizontal** de la aceleración. Después espera el primer empujón fuerte (el arranque) y toma esa dirección como "adelante".
+
+Por eso no tenés que pedirle al usuario que acomode el teléfono de una forma especial. Solo que vaya fijo.
+
+## 2. Juntar el acelerómetro y el GPS
+
+`SpeedFilter` es un **filtro de Kalman de dos estados**: la velocidad y el sesgo del acelerómetro (el pequeño error constante que tiene todo sensor, y que crece si el soporte está inclinado).
+
+- Cien veces por segundo, **predice** la velocidad sumando la aceleración.
+- Cada vez que llega un dato del GPS, **corrige** la velocidad y aprende el sesgo, pesando cada fuente según cuánto confía en ella (la precisión que reporta el GPS).
+
+El resultado es una curva de velocidad suave como la del acelerómetro y sin deriva, como la del GPS.
+
+## 3. Leer la corrida
+
+`RunAnalyzer` busca el **arranque**: un segundo quieto y después una aceleración sostenida. Desde ahí arma la curva de velocidad y distancia en el tiempo (`trace`) y lee cada marca:
+
+- **Distancias** (60 pies, 1/8, 1/4): el momento en que la distancia cruza la marca, menos el pie de rollout.
+- **Velocidades** (0 a 100): el momento en que la velocidad cruza el valor.
+- **Trampa**: la velocidad al pasar la marca, como el radar de la pista.
+
+<Aside type="note" title="¿Por qué los tiempos oficiales llegan al final?">
+Durante la corrida, la sesión solo tiene los datos hasta ese instante. Al terminar, `RunAnalyzer` recorre todo de nuevo con el sesgo ya aprendido, y los tiempos mejoran. Por eso los `passed` en vivo son una estimación, y el `finished` es el que vale.
+</Aside>
+
+## En la vida real
+
+- **Soporte rígido.** Si el teléfono vibra o se mueve, el acelerómetro mide el soporte y no el carro. `RunQuality` lo detecta (`looseMount`, `phoneMoved`).
+- **Cielo abierto.** El GPS necesita ver satélites. Bajo techo o entre edificios la precisión cae (`inaccurateGPS`).
+- **Un GPS más rápido ayuda.** Con un receptor de 10 Hz por Bluetooth el cuarto de milla mejora; viene en la [fase 3](/referencia/roadmap/).

@@ -1,0 +1,135 @@
+---
+title: Corridas grabadas
+description: Guardá cada corrida en el formato torke.run, volvé a analizarla en otra plataforma o en tu servidor y reproducila en pruebas.
+---
+
+import { TabItem, Tabs, Aside, CardGrid, Card } from '@astrojs/starlight/components';
+
+Cada corrida se puede guardar con **todas sus muestras crudas** (acelerómetro y GPS) más el resultado. Con eso podés volver a calcular los tiempos cuando quieras: en otro teléfono, en tu servidor o en una prueba automática.
+
+## Guardar
+
+Cuando llega `finished`, pedile la grabación a la sesión y convertila en JSON:
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+let run = session.recording(device: "iPhone16,1", app: "MiApp 1.0")
+let data = try run.encoded()            // el JSON torke.run
+try data.write(to: url)
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val run = session.recording(device = Build.MODEL, app = "MiApp 1.0")
+val json = run.encode()                 // el JSON torke.run
+file.writeText(json)
+```
+
+</TabItem>
+</Tabs>
+
+Una corrida de un cuarto de milla pesa unos 200 KB. Usá la extensión `.torkerun.json`.
+
+## Volver a analizar
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+let run = try TorkeRun.decode(data)
+let result = run.analyze()              // los tiempos otra vez
+let start = run.startLocation           // dónde arrancó
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val run = TorkeRun.decode(json)
+val result = run.analyze()              // los tiempos otra vez
+val start = run.startLocation           // dónde arrancó
+```
+
+</TabItem>
+</Tabs>
+
+<Aside type="tip" title="En tu servidor">
+El módulo `torke-kit` de Android no tiene código de Android: agregalo a un servidor en Kotlin o Java y recalculá los tiempos de cada corrida que te suben. Así el ranking no depende del número que mandó el teléfono.
+</Aside>
+
+## Reproducir
+
+`RecordedRunProvider` le da una corrida grabada a una sesión como si fueran los sensores. Sirve para pruebas, demos y para revisar un error que te reportaron.
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+let session = RunSession()
+session.arm()
+await session.run(with: RecordedRunProvider(run))                 // lo más rápido posible
+session.start(with: RecordedRunProvider(run, speed: 1))           // a la velocidad real, para una demo
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val session = RunSession()
+session.arm()
+session.run(RecordedRunProvider(run))                             // lo más rápido posible
+session.start(RecordedRunProvider(run, speed = 1.0), scope)       // a la velocidad real, para una demo
+```
+
+</TabItem>
+</Tabs>
+
+## Pruebas automáticas
+
+La corrida simulada (`RecordedRunProvider.demo()`) siempre da los mismos números. Usala para fijar el comportamiento de tu app:
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+func testDemoRun() async throws {
+    let session = RunSession()
+    session.arm()
+    await session.run(with: RecordedRunProvider.demo())
+    let r = try XCTUnwrap(session.snapshot.result)
+    XCTAssertEqual(r.quarterMile!, 12.826, accuracy: 0.001)
+}
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+@Test fun demoRun() = runTest {
+    val session = RunSession()
+    session.arm()
+    session.run(RecordedRunProvider.demo())
+    val r = session.snapshot.value.result!!
+    assertEquals(12.826, r.quarterMile!!, 0.001)
+}
+```
+
+</TabItem>
+</Tabs>
+
+## Archivos de referencia
+
+Los repositorios traen corridas de ejemplo en `Fixtures/`. Las dos plataformas las leen en sus pruebas y tienen que dar los mismos números:
+
+<CardGrid>
+	<Card title="demo-42.torkerun.json">El carro simulado. Tiempos iguales al medio milisegundo.</Card>
+	<Card title="launch.torkerun.json">Una arrancada con altitudes, clima y un 4-link.</Card>
+	<Card title="rolling / braking">Un tramo de 60 a 130 km/h y un frenado de 100 a 0.</Card>
+	<Card title="phase2-expected.json">Los resultados esperados de clima, suspensión, calidad y potencia.</Card>
+</CardGrid>
+
+El detalle de cada campo está en [Formato torke.run](/referencia/formato/).

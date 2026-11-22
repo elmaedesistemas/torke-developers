@@ -1,0 +1,263 @@
+---
+// Laboratorio de 4-link: arrastrá los cuatro puntos de montaje y mirá el centro instantáneo y el
+// anti-squat. Mismas fórmulas que SuspensionGeometry en TorkeKit. Medidas en pulgadas: x hacia
+// adelante desde el eje trasero, y hacia arriba desde el piso.
+---
+
+<div class="tk-lab not-content" data-suspension id="laboratorio-4link">
+	<div class="tk-lab-head">
+		<b>Laboratorio 4-link</b>
+		<small>Arrastrá los puntos verdes</small>
+		<button type="button" data-reset>Restablecer</button>
+	</div>
+	<div class="tk-stage-svg">
+		<svg viewBox="0 0 820 300" role="img" aria-label="Vista lateral de una suspensión 4-link con el centro instantáneo">
+			<defs>
+				<pattern id="tk-grid" width="25" height="25" patternUnits="userSpaceOnUse">
+					<circle cx="1" cy="1" r="1" fill="var(--sl-color-gray-5)" />
+				</pattern>
+			</defs>
+			<rect width="820" height="300" fill="url(#tk-grid)" />
+			<!-- Piso -->
+			<line x1="0" y1="270" x2="820" y2="270" stroke="var(--sl-color-gray-4)" stroke-width="2" />
+			<!-- Carrocería y llantas -->
+			<path data-body fill="none" stroke="var(--sl-color-gray-5)" stroke-width="3" stroke-linejoin="round" />
+			<g data-wheels fill="none" stroke="var(--sl-color-gray-4)" stroke-width="10"></g>
+			<!-- Línea del 100 % de anti-squat y línea de anti-squat real -->
+			<line data-line100 stroke="var(--sl-color-gray-4)" stroke-width="1.5" stroke-dasharray="6 6" />
+			<text data-label100 fill="var(--sl-color-gray-4)" font-size="12">100 %</text>
+			<line data-lineAS stroke="#ffb31a" stroke-width="2" />
+			<!-- Prolongación de las barras hasta el centro instantáneo -->
+			<line data-extU stroke="var(--sl-color-accent)" stroke-width="1.5" stroke-dasharray="4 5" opacity=".6" />
+			<line data-extL stroke="var(--sl-color-accent)" stroke-width="1.5" stroke-dasharray="4 5" opacity=".6" />
+			<!-- Barras -->
+			<line data-barU stroke="var(--sl-color-gray-1)" stroke-width="7" stroke-linecap="round" />
+			<line data-barL stroke="var(--sl-color-gray-1)" stroke-width="7" stroke-linecap="round" />
+			<!-- Centro de gravedad -->
+			<g data-cg>
+				<circle r="9" fill="none" stroke="var(--sl-color-gray-2)" stroke-width="2" />
+				<path d="M-9 0 H9 M0 -9 V9" stroke="var(--sl-color-gray-2)" stroke-width="2" />
+				<text x="14" y="4" fill="var(--sl-color-gray-3)" font-size="12">CG</text>
+			</g>
+			<!-- Centro instantáneo -->
+			<g data-ic>
+				<circle r="10" fill="#ffb31a" opacity=".25" />
+				<circle r="5" fill="#ffb31a" />
+				<text x="12" y="-10" fill="#ffb31a" font-size="13" font-weight="700">IC</text>
+			</g>
+			<!-- Puntos que se arrastran -->
+			{['upperRear', 'upperFront', 'lowerRear', 'lowerFront'].map((k) => (
+				<g class="tk-handle" data-handle={k} tabindex="0" role="slider" aria-label={k}>
+					<circle r="30" fill="transparent" />
+					<circle r="8" fill="var(--sl-color-black)" stroke="var(--sl-color-accent)" stroke-width="4" />
+				</g>
+			))}
+		</svg>
+	</div>
+	<div class="tk-readouts">
+		<div class="tk-readout" data-r="icl"><small>IC largo</small><strong></strong></div>
+		<div class="tk-readout" data-r="ich"><small>IC alto</small><strong></strong></div>
+		<div class="tk-readout" data-r="as"><small>Anti-squat</small><strong></strong></div>
+		<div class="tk-readout tk-readout-sm" data-r="ang"><small>Ángulo sup. / inf.</small><strong></strong></div>
+	</div>
+	<div class="tk-sliders">
+		<div class="tk-slider">
+			<label for="tk-cg">Altura del CG</label>
+			<input id="tk-cg" type="range" min="14" max="30" step="0.5" value="21" data-cg-input />
+			<output data-o="cg"></output>
+		</div>
+	</div>
+	<p class="tk-lab-note" data-note></p>
+	<pre class="tk-code" data-code></pre>
+</div>
+
+<script>
+	import { followPlatform, onPlatform, type Platform } from './platform';
+
+	type P = { x: number; y: number };
+	const WHEELBASE = 106;
+	const DEFAULTS: Record<string, P> = {
+		upperRear: { x: 4, y: 21 },
+		upperFront: { x: 30, y: 18 },
+		lowerRear: { x: 2, y: 9 },
+		lowerFront: { x: 30, y: 11 },
+	};
+	// Pulgadas → coordenadas del SVG.
+	const X = (x: number) => 70 + x * 5.2;
+	const Y = (y: number) => 270 - y * 5.2;
+	const inX = (px: number) => (px - 70) / 5.2;
+	const inY = (py: number) => (270 - py) / 5.2;
+	const LIMITS: Record<string, [number, number, number, number]> = {
+		upperRear: [-8, 14, 12, 34],
+		upperFront: [16, 60, 10, 36],
+		lowerRear: [-8, 14, 3, 18],
+		lowerFront: [16, 60, 3, 24],
+	};
+
+	// SuspensionGeometry.intersect, igual que en el SDK.
+	function intersect(a1: P, a2: P, b1: P, b2: P): P | null {
+		const d1 = { x: a2.x - a1.x, y: a2.y - a1.y };
+		const d2 = { x: b2.x - b1.x, y: b2.y - b1.y };
+		const cross = d1.x * d2.y - d1.y * d2.x;
+		if (Math.abs(cross) <= 1e-9) return null;
+		const t = ((b1.x - a1.x) * d2.y - (b1.y - a1.y) * d2.x) / cross;
+		return { x: a1.x + t * d1.x, y: a1.y + t * d1.y };
+	}
+	const angle = (r: P, f: P) => (Math.atan2(f.y - r.y, f.x - r.x) * 180) / Math.PI;
+	const f1 = (n: number) => n.toLocaleString('es-CR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+	followPlatform();
+
+	for (const root of document.querySelectorAll<HTMLElement>('[data-suspension]')) {
+		const svg = root.querySelector('svg')!;
+		const q = <T extends Element>(s: string) => root.querySelector<T>(s)!;
+		const set = (el: Element, attrs: Record<string, number | string>) => {
+			for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
+		};
+		const pts: Record<string, P> = structuredClone(DEFAULTS);
+		let cg = 21;
+		let platform: Platform = 'swift';
+
+		// Carrocería: un dibujo fijo, de referencia.
+		q('[data-body]').setAttribute(
+			'd',
+			`M${X(-20)} ${Y(14)} L${X(-22)} ${Y(30)} Q${X(-18)} ${Y(38)} ${X(-4)} ${Y(39)} L${X(20)} ${Y(40)} L${X(40)} ${Y(50)} L${X(78)} ${Y(51)} L${X(96)} ${Y(38)} L${X(128)} ${Y(34)} Q${X(134)} ${Y(30)} ${X(133)} ${Y(16)}`,
+		);
+		q('[data-wheels]').innerHTML = [0, WHEELBASE]
+			.map((x) => `<circle cx="${X(x)}" cy="${Y(13)}" r="${13 * 5.2 - 5}"/><circle cx="${X(x)}" cy="${Y(13)}" r="10" fill="var(--sl-color-gray-4)" stroke="none"/>`)
+			.join('');
+
+		const render = () => {
+			const { upperRear: ur, upperFront: uf, lowerRear: lr, lowerFront: lf } = pts;
+			for (const [k, p] of Object.entries(pts)) {
+				q(`[data-handle="${k}"]`).setAttribute('transform', `translate(${X(p.x)} ${Y(p.y)})`);
+				q(`[data-handle="${k}"]`).setAttribute('aria-valuetext', `x ${p.x}, y ${p.y}`);
+			}
+			set(q('[data-barU]'), { x1: X(ur.x), y1: Y(ur.y), x2: X(uf.x), y2: Y(uf.y) });
+			set(q('[data-barL]'), { x1: X(lr.x), y1: Y(lr.y), x2: X(lf.x), y2: Y(lf.y) });
+			q('[data-cg]').setAttribute('transform', `translate(${X(WHEELBASE / 2)} ${Y(cg)})`);
+
+			// 100 %: del contacto de la llanta trasera al CG sobre el eje delantero.
+			set(q('[data-line100]'), { x1: X(0), y1: Y(0), x2: X(WHEELBASE), y2: Y(cg) });
+			set(q('[data-label100]'), { x: X(WHEELBASE) - 44, y: Y(cg) - 8 });
+
+			const ic = intersect(ur, uf, lr, lf);
+			const notes: string[] = [];
+			let antiSquat: number | null = null;
+			const icEl = q<SVGGElement>('[data-ic]');
+			if (ic) {
+				if (ic.x <= 0) notes.push('El centro instantáneo quedó detrás del eje: las barras convergen hacia atrás.');
+				if (ic.y < 0) notes.push('El centro instantáneo quedó bajo el piso.');
+				if (ic.x > 0 && cg > 0) antiSquat = (ic.y / ic.x / (cg / WHEELBASE)) * 100;
+				const onScreen = ic.x > -12 && ic.x < 146 && ic.y > -4 && ic.y < 54;
+				icEl.style.display = onScreen ? '' : 'none';
+				icEl.setAttribute('transform', `translate(${X(ic.x)} ${Y(ic.y)})`);
+				set(q('[data-extU]'), { x1: X(uf.x), y1: Y(uf.y), x2: X(ic.x), y2: Y(ic.y) });
+				set(q('[data-extL]'), { x1: X(lf.x), y1: Y(lf.y), x2: X(ic.x), y2: Y(ic.y) });
+				if (!onScreen) notes.push('El centro instantáneo quedó fuera del dibujo: las barras son casi paralelas.');
+				// Línea de anti-squat: del contacto de la llanta, pasando por el IC, hasta el eje delantero.
+				if (ic.x > 0) {
+					const yAtFront = (ic.y / ic.x) * WHEELBASE;
+					set(q('[data-lineAS]'), { x1: X(0), y1: Y(0), x2: X(WHEELBASE), y2: Y(yAtFront) });
+				}
+			} else {
+				icEl.style.display = 'none';
+				notes.push('Las barras son paralelas: el centro instantáneo está en el infinito.');
+			}
+			q<SVGLineElement>('[data-lineAS]').style.display = antiSquat == null ? 'none' : '';
+			for (const k of ['extU', 'extL']) q<SVGLineElement>(`[data-${k}]`).style.display = ic ? '' : 'none';
+
+			const read = (k: string, html: string) => (q(`[data-r="${k}"] strong`).innerHTML = html);
+			read('icl', ic ? `${f1(ic.x)}<em>in</em>` : '∞');
+			read('ich', ic ? `${f1(ic.y)}<em>in</em>` : '—');
+			read('as', antiSquat == null ? '—' : `${Math.round(antiSquat)}<em>%</em>`);
+			read('ang', `${f1(angle(ur, uf))}° / ${f1(angle(lr, lf))}°`);
+			q('[data-o="cg"]').textContent = `${f1(cg)} in`;
+			const input = q<HTMLInputElement>('[data-cg-input]');
+			input.style.setProperty('--fill', `${((cg - +input.min) / (+input.max - +input.min)) * 100}%`);
+
+			if (antiSquat != null && !notes.length) {
+				notes.push(
+					antiSquat > 100
+						? 'Más de 100 %: al acelerar, la suspensión empuja la carrocería hacia arriba atrás (la cola sube).'
+						: 'Menos de 100 %: al acelerar, la cola se sienta (squat).',
+				);
+			}
+			const note = q('[data-note]');
+			note.textContent = notes.join(' ');
+			note.style.color = ic && ic.x > 0 && ic.y >= 0 ? 'var(--sl-color-gray-2)' : '';
+
+			const kt = (n: number) => (Number.isInteger(n) ? `${n}.0` : `${n}`);
+			const p = (o: P) => (platform === 'swift' ? `Point2(x: ${o.x}, y: ${o.y})` : `Point2(${kt(o.x)}, ${kt(o.y)})`);
+			const code =
+				platform === 'swift'
+					? `<span class="k">let</span> setup = <span class="t">SuspensionSetup</span>.fourLink(
+    wheelbase: <span class="n">${WHEELBASE}</span>, cgHeight: <span class="n">${cg}</span>,
+    upperRear: ${p(ur)}, upperFront: ${p(uf)},
+    lowerRear: ${p(lr)}, lowerFront: ${p(lf)}
+)
+<span class="k">let</span> g = setup.geometry()   <span class="k">//</span> IC ${ic ? `${f1(ic.x)} × ${f1(ic.y)} in` : '∞'}, anti-squat ${antiSquat == null ? '—' : Math.round(antiSquat) + ' %'}`
+					: `<span class="k">val</span> setup = <span class="t">SuspensionSetup</span>.fourLink(
+    wheelbase = <span class="n">${WHEELBASE}.0</span>, cgHeight = <span class="n">${kt(cg)}</span>,
+    upperRear = ${p(ur)}, upperFront = ${p(uf)},
+    lowerRear = ${p(lr)}, lowerFront = ${p(lf)},
+)
+<span class="k">val</span> g = setup.geometry()   <span class="k">//</span> IC ${ic ? `${f1(ic.x)} × ${f1(ic.y)} in` : '∞'}, anti-squat ${antiSquat == null ? '—' : Math.round(antiSquat) + ' %'}`;
+			q('[data-code]').innerHTML = code;
+		};
+
+		// Arrastre con el puntero (mouse, dedo o lápiz).
+		const toSvg = (e: PointerEvent) => {
+			const pt = svg.createSVGPoint();
+			pt.x = e.clientX;
+			pt.y = e.clientY;
+			return pt.matrixTransform(svg.getScreenCTM()!.inverse());
+		};
+		const move = (key: string, x: number, y: number) => {
+			const [x0, x1, y0, y1] = LIMITS[key];
+			const snap = (v: number) => Math.round(v * 2) / 2;
+			pts[key] = { x: snap(Math.min(Math.max(x, x0), x1)), y: snap(Math.min(Math.max(y, y0), y1)) };
+			render();
+		};
+		root.querySelectorAll<SVGGElement>('[data-handle]').forEach((h) => {
+			const key = h.dataset.handle!;
+			h.addEventListener('pointerdown', (e) => {
+				h.setPointerCapture(e.pointerId);
+				const drag = (ev: PointerEvent) => {
+					const s = toSvg(ev);
+					move(key, inX(s.x), inY(s.y));
+				};
+				const end = () => {
+					h.removeEventListener('pointermove', drag);
+					h.removeEventListener('pointerup', end);
+					h.removeEventListener('pointercancel', end);
+				};
+				h.addEventListener('pointermove', drag);
+				h.addEventListener('pointerup', end);
+				h.addEventListener('pointercancel', end);
+			});
+			// Teclado: flechas mueven media pulgada (con Shift, dos).
+			h.addEventListener('keydown', (e) => {
+				const step = e.shiftKey ? 2 : 0.5;
+				const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] }[e.key];
+				if (!d) return;
+				e.preventDefault();
+				move(key, pts[key].x + d[0], pts[key].y + d[1]);
+			});
+		});
+		q<HTMLInputElement>('[data-cg-input]').addEventListener('input', (e) => {
+			cg = +(e.target as HTMLInputElement).value;
+			render();
+		});
+		q('[data-reset]').addEventListener('click', () => {
+			Object.assign(pts, structuredClone(DEFAULTS));
+			cg = 21;
+			q<HTMLInputElement>('[data-cg-input]').value = '21';
+			render();
+		});
+		onPlatform((pl) => {
+			platform = pl;
+			render();
+		});
+	}
+</script>

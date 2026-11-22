@@ -1,0 +1,103 @@
+---
+title: Clima y potencia
+description: Corregí los tiempos a aire estándar con SAE J1349, calculá la altitud de densidad y estimá los caballos del carro con la velocidad de trampa.
+---
+
+import { TabItem, Tabs, Aside } from '@astrojs/starlight/components';
+import WeatherLab from '../../../components/WeatherLab.astro';
+
+El mismo carro es más lento un día caliente y húmedo, o en una pista alta: el aire es menos denso y el motor saca menos potencia. Para comparar corridas de días distintos, TorkeKit **corrige los tiempos a aire estándar** (25 °C, 990 hPa de aire seco, la norma SAE J1349).
+
+## Probalo
+
+<WeatherLab />
+
+Movés el clima y ves cómo cambia la corrida demo. Con 31 °C, 70 % de humedad y 910 hPa (una tarde en una pista a unos 900 m de altura) el aire se comporta como si estuvieras a casi 1.800 m, y el carro pierde un 14 % de potencia: la corrida demo bajaría de 12,826 a 12,196 s en aire estándar.
+
+## En código
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+let weather = Weather(temperatureC: 31, humidity: 70, pressureHpa: 910)
+
+weather.densityAltitude          // metros: más alto = aire más delgado
+weather.airDensity               // kg/m³
+weather.correctionFactor         // mayor que 1: el aire le costó potencia
+
+let corrected = result.corrected(for: weather)
+corrected.quarterMile            // el 1/4 en aire estándar
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val weather = Weather(temperatureC = 31.0, humidity = 70.0, pressureHpa = 910.0)
+
+weather.densityAltitude          // metros: más alto = aire más delgado
+weather.airDensity               // kg/m³
+weather.correctionFactor         // mayor que 1: el aire le costó potencia
+
+val corrected = result.corrected(weather)
+corrected.quarterMile            // el 1/4 en aire estándar
+```
+
+</TabItem>
+</Tabs>
+
+<Aside type="caution" title="Presión de la estación, no la del pronóstico">
+`pressureHpa` es la presión **real en la pista**. Las apps del clima suelen mostrar la presión al nivel del mar, que en una pista alta da un valor muy distinto. Usá un barómetro, el del teléfono (`CMAltimeter` en iOS, el sensor `TYPE_PRESSURE` en Android) o una estación meteorológica cercana.
+</Aside>
+
+Los tiempos se corrigen con la raíz cúbica de la potencia (`tiempo × factor^-1/3`) y las velocidades al revés (`velocidad × factor^1/3`). El recorrido (`trace`) queda como se midió.
+
+## Potencia estimada
+
+Con el peso del carro **con piloto** y la velocidad de trampa del cuarto de milla, la fórmula de Hale da una buena estimación de los caballos en el volante:
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+// Velocidad de trampa: la más confiable
+PowerEstimate.fromTrapSpeed(massKg: 1350, quarterMileKmh: result.quarterMileKmh!)
+
+// Por el tiempo: lee bajo si el carro patina en la salida
+PowerEstimate.fromElapsedTime(massKg: 1350, quarterMile: result.quarterMile!)
+
+// Potencia en las ruedas a lo largo de la corrida
+let curve = PowerEstimate.wheelPower(result, massKg: 1350, dragArea: 0.6)
+let peak = PowerEstimate.peakWheelHp(result, massKg: 1350)
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+// Velocidad de trampa: la más confiable
+PowerEstimate.fromTrapSpeed(massKg = 1350.0, quarterMileKmh = result.quarterMileKmh!!)
+
+// Por el tiempo: lee bajo si el carro patina en la salida
+PowerEstimate.fromElapsedTime(massKg = 1350.0, quarterMile = result.quarterMile!!)
+
+// Potencia en las ruedas a lo largo de la corrida
+val curve = PowerEstimate.wheelPower(result, massKg = 1350.0, dragArea = 0.6)
+val peak = PowerEstimate.peakWheelHp(result, massKg = 1350.0)
+```
+
+</TabItem>
+</Tabs>
+
+`wheelPower` suma lo que costó acelerar el carro, vencer el aire y la resistencia de las llantas. Los parámetros:
+
+| Parámetro | Por defecto | Valores típicos |
+| --- | --- | --- |
+| `dragArea` | 0,7 m² | Coeficiente de arrastre × área frontal. 0,6 un sedán, 0,8 un pickup. |
+| `rollingResistance` | 0,015 | 0,012 con llantas de drag, 0,015 de calle. |
+| `airDensity` | 1,2 kg/m³ | `weather.airDensity` si lo tenés. |
+
+<Aside type="note">
+Son aproximaciones de más o menos un 15 %. Sirven para **comparar cambios en el mismo carro** (otro turbo, otra llanta), no para reemplazar un dinamómetro.
+</Aside>

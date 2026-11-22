@@ -1,0 +1,34 @@
+---
+title: Precisión
+description: Qué tan cerca están los tiempos de TorkeKit de los reales, cómo se prueba y qué afecta la precisión.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Las pruebas automáticas de TorkeKit simulan corridas con física exacta (sabemos el tiempo real) y las pasan por el motor con lo peor de un teléfono: **GPS de 1 Hz, ruido en los sensores y el soporte inclinado**. Cada versión tiene que cumplir estas metas:
+
+| Marca | Meta |
+| --- | --- |
+| 60 pies | ± 0,10 s |
+| 0 a 100 km/h | ± 0,20 s |
+| 1/4 de milla | ± 0,15 s |
+
+Además, iOS y Android tienen que dar **el mismo resultado** con las mismas muestras: las pruebas de las dos plataformas leen `demo-42.torkerun.json` y comparan los tiempos al medio milisegundo.
+
+## Qué la mejora y qué la empeora
+
+| Mejora | Empeora |
+| --- | --- |
+| Soporte rígido | Teléfono en la mano o suelto |
+| Cielo abierto | Techos, árboles, edificios |
+| GPS de 5 Hz o más | GPS de 1 Hz con datos perdidos |
+| Pista plana | Pendiente (la gravedad se cuela como aceleración) |
+| Un segundo quieto antes de salir | Salir rodando |
+
+## Lo que falta
+
+Las metas de arriba se verifican con corridas simuladas. La **validación contra boletas de pista** (corridas reales medidas a la vez con TorkeKit y con el cronómetro de la pista) está en el [roadmap](/referencia/roadmap/) como `torke-validate`.
+
+<Aside type="tip" title="¿Tenés boletas?">
+Si medís corridas en pista con TorkeKit, guardá la grabación (`.torkerun.json`) junto a la foto de la boleta. Son justo los datos que necesitamos para validar el motor: abrí un issue en el [repositorio](https://github.com/elmaedesistemas/torke-kit-ios/issues).
+</Aside>

@@ -1,0 +1,108 @@
+---
+// Las fases de RunSession: tocá una para ver qué significa, qué evento la trae y qué hacer en pantalla.
+// Con "Reproducir" recorre una corrida completa.
+const phases = [
+	{
+		id: 'idle', swift: '.idle', kotlin: 'Idle', step: 'start()',
+		text: 'No graba. Si ya llamaste <code>start</code>, el GPS igual refresca <code>speed</code> y <code>location</code>: es la vista previa antes de la línea.',
+		ui: 'Mostrá la velocidad del GPS y el botón para armar.', ev: '',
+	},
+	{
+		id: 'waiting', swift: '.waitingStill', kotlin: 'WaitingStill', step: 'arm()',
+		text: 'Graba y espera que el carro esté <b>un segundo quieto</b> (aceleración bajo 0,6 m/s² y GPS bajo 1,5 m/s).',
+		ui: '«Quedate quieto en la línea».', ev: '',
+	},
+	{
+		id: 'armed', swift: '.armed', kotlin: 'Armed', step: 'quieto',
+		text: 'Listo para salir. El cronómetro arranca solo con una aceleración sostenida. Si se mueve sin arrancar, vuelve a esperar y llega <code>disarmed</code>.',
+		ui: 'Arbolito en verde: «Salí cuando quieras».', ev: 'armed',
+	},
+	{
+		id: 'running', swift: '.running(start:)', kotlin: 'Running(start)', step: 'arranque',
+		text: 'Midiendo. <code>elapsed</code> y <code>distance</code> corren en vivo, y cada marca llega como <code>passed</code> (estimación del GPS).',
+		ui: 'Cronómetro grande y las marcas a medida que pasan.', ev: 'launched → passed (60 ft) → passed (1/8) → …',
+	},
+	{
+		id: 'finished', swift: '.finished', kotlin: 'Finished', step: 'fin',
+		text: 'Terminó sola: pasó el cuarto de milla, el piloto levantó el pie o pasaron 40 s. <code>result</code> trae los tiempos oficiales, calculados con todas las muestras.',
+		ui: 'La boleta. Guardá la corrida con <code>recording()</code>.', ev: 'finished(result)',
+	},
+	{
+		id: 'failed', swift: '.failed(_)', kotlin: 'Failed(failure)', step: 'error',
+		text: 'No hubo corrida: <code>noLaunch</code> (terminó sin arrancar), <code>noInterval</code>, <code>noMotionSensors</code> o <code>locationDenied</code>.',
+		ui: 'Explicá el motivo y ofrecé armar de nuevo.', ev: 'failed(failure)',
+	},
+];
+---
+
+<div class="tk-lab tk-session not-content" data-session>
+	<div class="tk-lab-head">
+		<b>Fases de RunSession</b>
+		<small>Tocá una fase</small>
+		<button type="button" data-play>▶ Reproducir</button>
+	</div>
+	<div class="tk-phases" role="group" aria-label="Fases">
+		{phases.map((p, i) => (
+			<button type="button" class="tk-phase" data-i={i} aria-pressed={i === 0 ? 'true' : 'false'}>
+				<small>{p.step}</small>
+				<b><span data-only-swift>{p.swift}</span><span data-only-kotlin>{p.kotlin}</span></b>
+			</button>
+		))}
+	</div>
+	<div class="tk-phase-detail" aria-live="polite">
+		{phases.map((p, i) => (
+			<div data-detail={i} hidden={i !== 0}>
+				<p set:html={p.text} />
+				<p><b>En pantalla:</b> <span set:html={p.ui} /></p>
+				{p.ev && <p class="tk-ev">evento: {p.ev}</p>}
+			</div>
+		))}
+	</div>
+</div>
+
+<style>
+	/* Nombres en Swift o Kotlin según la pestaña elegida en el sitio. */
+	[data-only-kotlin] { display: none; }
+	:global(html[data-tk-platform='kotlin']) [data-only-kotlin] { display: inline; }
+	:global(html[data-tk-platform='kotlin']) [data-only-swift] { display: none; }
+</style>
+
+<script>
+	import { followPlatform } from './platform';
+
+	followPlatform();
+	for (const root of document.querySelectorAll<HTMLElement>('[data-session]')) {
+		const buttons = [...root.querySelectorAll<HTMLButtonElement>('.tk-phase')];
+		const details = [...root.querySelectorAll<HTMLElement>('[data-detail]')];
+		const play = root.querySelector<HTMLButtonElement>('[data-play]')!;
+		let timer: number | undefined;
+
+		const show = (i: number) => {
+			buttons.forEach((b, k) => b.setAttribute('aria-pressed', String(k === i)));
+			details.forEach((d, k) => (d.hidden = k !== i));
+		};
+		buttons.forEach((b, i) =>
+			b.addEventListener('click', () => {
+				clearInterval(timer);
+				play.textContent = '▶ Reproducir';
+				show(i);
+			}),
+		);
+		play.addEventListener('click', () => {
+			clearInterval(timer);
+			let i = 0;
+			show(i);
+			play.textContent = '■ Reproduciendo';
+			// Idle → WaitingStill → Armed → Running → Finished (Failed queda fuera del recorrido feliz).
+			timer = window.setInterval(() => {
+				i += 1;
+				if (i > 4) {
+					clearInterval(timer);
+					play.textContent = '▶ Reproducir';
+					return;
+				}
+				show(i);
+			}, 1800);
+		});
+	}
+</script>
