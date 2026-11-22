@@ -1,6 +1,6 @@
 ---
 title: Roadmap
-description: 'O que o TorkeKit já traz e o que vem por aí: árvore, cronômetro de voltas e geocercas.'
+description: 'O que o TorkeKit já traz e o que vem por aí: bracket racing e aprender com o acerto.'
 ---
 
 ## ✅ Fase 1 · O núcleo aberto (0.1)
@@ -19,11 +19,14 @@ Ficou para depois: a migração do centro instantâneo com o curso da suspensão
 
 O TorkeKit fica só com o celular: sem receptores externos nem outro hardware.
 
-## Fase 4 · Ferramentas de pista
+## ✅ Fase 4 · Ferramentas de pista (0.4)
 
-- **Árvore:** Pro (.400) e Sportsman (.500), tempo de reação e queima de largada.
-- **Cronômetro de voltas** para circuitos: linha de chegada, setores e volta projetada.
-- **Geocercas** para pistas e eventos.
+Árvore Pro e Sportsman com tempo de reação e queima de largada, cronômetro de voltas com setores e delta ao vivo, e geocercas para pistas e eventos.
+
+## O que vem
+
+- **Bracket racing:** dial-in, *breakout* e quem ganha numa bateria.
+- **Aprender com o acerto:** o efeito da suspensão nos 60 pés com as arrancadas de muitos carros.
 
 ## Fora do SDK
 

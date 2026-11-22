@@ -150,6 +150,21 @@ Métodos: `analyze(stopDistance:)`, `rolling(fromKmh:toKmh:)`, `braking(fromKmh:
 
 Veja [Validação com tickets](/pt/guias/validacion/).
 
+## Pista
+
+| Tipo | O que é |
+| --- | --- |
+| `ChristmasTree` | `type` (`pro`, `sportsman`), `activatedAt`, `lights`, `greenAt`, `lit(at:)`, `reaction(leftStageAt:)`, `estimatedReaction(launchedAt:)`; `ChristmasTree.start(type:stagedAt:seed:)`. |
+| `TreeLight`, `Reaction` | Uma luz (`kind`, `time`); a reação (`time`, `isRedLight`, `isPerfect`). |
+| `RunResult` | `leftStageAt`, `reaction(on:)`, `package(on:)` (Kotlin: `reaction(tree)`, `packageTime(tree)`). |
+| `LapTimer` | `process(_:)` → `LapEvent` (`started`, `sector`, `lap`); `laps`, `bestLap`, `delta`, `predictedLap`, `elapsed(at:)`, `minimumLapTime`. |
+| `TimingLine`, `Lap` | Uma linha de dois pontos; uma volta (`number`, `start`, `time`, `sectors`, `distance`). |
+| `Geofence` | `circle(center:radius:)` ou `polygon(_:)`, `contains`; `[Geofence].first(containing:)` (Kotlin: `firstContaining`). |
+| `GeofenceCheck` | `TorkeRun.check(_:)`: `startInside`, `shareInside`, `allInside`. |
+| `Geo` | `distance(_:_:)` (haversine) e `local(_:origin:)`. |
+
+Veja [Ferramentas de pista](/pt/guias/pista/).
+
 ## Suspensão
 
 | Tipo | O que é |

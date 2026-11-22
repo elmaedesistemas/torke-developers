@@ -1,6 +1,6 @@
 ---
 title: Roadmap
-description: 'What TorkeKit already has and what comes next: the tree, a lap timer and geofences.'
+description: 'What TorkeKit already has and what comes next: bracket racing and learning from the setup.'
 ---
 
 ## ✅ Phase 1 · The open core (0.1)
@@ -19,11 +19,14 @@ Left for later: instant center migration through suspension travel, and learning
 
 TorkeKit stays phone-only: no external receivers or other hardware.
 
-## Phase 4 · Track tools
+## ✅ Phase 4 · Track tools (0.4)
 
-- **The tree:** Pro (.400) and Sportsman (.500), reaction time and red light.
-- **Lap timer** for road courses: start/finish line, sectors and predicted lap.
-- **Geofences** for tracks and events.
+Pro and Sportsman Christmas tree with reaction time and red light, a lap timer with sectors and live delta, and geofences for tracks and events.
+
+## What's next
+
+- **Bracket racing:** dial-in, breakout and who wins a pair.
+- **Learning from the setup:** the suspension's effect on the 60 ft from many cars' runs.
 
 ## Outside the SDK
 

@@ -1,0 +1,171 @@
+---
+title: Track tools
+description: An on-screen Christmas tree with reaction time, a lap timer with sectors and live delta, and geofences to decide where a run counts.
+---
+
+import { TabItem, Tabs, Aside } from '@astrojs/starlight/components';
+
+Three tools that work with the phone alone: a **Christmas tree** with reaction time like the track's, a **lap timer** for road courses and **geofences** to know where each run was made.
+
+## Christmas tree and reaction time
+
+Your app draws the tree; TorkeKit works out when each light comes on and, after the run, the reaction time.
+
+| Tree | Ambers | Green |
+| --- | --- | --- |
+| **Pro** (`.400`) | All three at once | 0.4 s later |
+| **Sportsman** (`.500`) | One every 0.5 s | 0.5 s after the last |
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+// When .armed arrives (the car is on the line):
+let tree = ChristmasTree.start(type: .pro, stagedAt: ProcessInfo.processInfo.systemUptime)
+
+// Draw the lights on time: tree.lit(at: now) says which are on
+for light in tree.lights { schedule(light.kind, at: light.time) }
+
+// After the run:
+if let reaction = result.reaction(on: tree) {
+    reaction.time          // seconds from green; negative = red light
+    reaction.isPerfect     // within half a millisecond
+}
+result.package(on: tree)   // reaction + 1/4 mile
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+// When RunEvent.Armed arrives (the car is on the line):
+val tree = ChristmasTree.start(TreeType.pro, stagedAt = SystemClock.elapsedRealtimeNanos() / 1e9)
+
+// Draw the lights on time: tree.lit(now) says which are on
+tree.lights.forEach { schedule(it.kind, it.time) }
+
+// After the run:
+result.reaction(tree)?.let { reaction ->
+    reaction.time          // seconds from green; negative = red light
+    reaction.isPerfect     // within half a millisecond
+}
+result.packageTime(tree)   // reaction + 1/4 mile
+```
+
+</TabItem>
+</Tabs>
+
+<Aside type="note" title="From the stage beam">
+Like at the track, the reaction counts from green until the car leaves the stage beam: the launch plus the one-foot rollout (`leftStageAt`). The lights use the same clock as the sensors (`systemUptime` on iOS, `elapsedRealtime` on Android), so there's no offset.
+</Aside>
+
+`ChristmasTree.start` waits a random 0.6 to 1.1 s before lighting, like the track's auto-start. For an instant red light use `tree.estimatedReaction(launchedAt:)` with the `launched` event; the exact value comes when the run finishes.
+
+## Lap timer
+
+For road courses: a start/finish line, optional sector lines and every GPS fix. TorkeKit interpolates the crossing between two fixes, so even a 1 Hz GPS times a lap to the tenth.
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+let finish = TimingLine(a: leftEdge, b: rightEdge, name: "Start/finish")
+let timer = LapTimer(start: finish, sectors: [sector1, sector2])
+
+// With every GPS fix (from RunSession events or your own provider)
+for event in timer.process(fix) {
+    switch event {
+    case .started: show("Go!")
+    case .sector(let i, let time): show("Sector \(i + 1): \(time) s")
+    case .lap(let lap): show("Lap \(lap.number): \(lap.time) s")
+    }
+}
+timer.delta          // against the best lap at the same distance: negative = ahead
+timer.predictedLap   // the best lap + the delta
+timer.bestLap
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val finish = TimingLine(leftEdge, rightEdge, name = "Start/finish")
+val timer = LapTimer(finish, listOf(sector1, sector2))
+
+// With every GPS fix
+timer.process(fix).forEach { event ->
+    when (event) {
+        is LapEvent.Started -> show("Go!")
+        is LapEvent.Sector -> show("Sector ${event.index + 1}: ${event.time} s")
+        is LapEvent.Completed -> show("Lap ${event.lap.number}: ${event.lap.time} s")
+    }
+}
+timer.delta          // against the best lap at the same distance: negative = ahead
+timer.predictedLap   // the best lap + the delta
+timer.bestLap
+```
+
+</TabItem>
+</Tabs>
+
+| `Lap` | What it is |
+| --- | --- |
+| `number` | 1 for the first full lap (the first crossing only starts the timer). |
+| `time` | Seconds. |
+| `sectors` | Each sector's time; they add up to the lap. Empty without sector lines. |
+| `distance` | Meters driven, from the GPS. |
+
+<Aside type="tip" title="Draw the lines a bit wide">
+Each line goes from one edge of the track to the other, with a few extra meters on each side so every lap crosses it. A repeated crossing within `minimumLapTime` (10 s) is ignored: it's the GPS jumping over the line.
+</Aside>
+
+## Geofences
+
+A circle or a polygon on the map: the track, an event's paddock. They decide whether a run counts.
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+let guacima = Geofence.circle(center: Coordinate(latitude: 9.9412, longitude: -84.2005), radius: 400, name: "La Guácima")
+let paddock = Geofence.polygon([p1, p2, p3, p4], name: "Paddock")
+
+guacima.contains(coordinate)
+[guacima, paddock].first(containing: run.startLocation!)   // which track it launched at
+
+if let check = run.check(guacima) {
+    check.startInside    // launched inside
+    check.shareInside    // how much of the run was inside, 0 to 1
+    check.allInside
+}
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val guacima = Geofence.circle(Coordinate(9.9412, -84.2005), 400.0, name = "La Guácima")
+val paddock = Geofence.polygon(listOf(p1, p2, p3, p4), name = "Paddock")
+
+coordinate in guacima
+listOf(guacima, paddock).firstContaining(run.startLocation!!)   // which track it launched at
+
+run.check(guacima)?.let { check ->
+    check.startInside    // launched inside
+    check.shareInside    // how much of the run was inside, 0 to 1
+    check.allInside
+}
+```
+
+</TabItem>
+</Tabs>
+
+Geofences and lines are plain JSON, the same on iOS and Android: your app can download its tracks from a server.
+
+```json
+{ "kind": "circle", "name": "La Guácima", "center": { "latitude": 9.9412, "longitude": -84.2005 }, "radius": 400 }
+```
+
+<Aside type="caution" title="The final call, on the server">
+The app can warn live whether you're at the track, but for a leaderboard check the recording again on your server with `check`: the user's phone is not a trusted source.
+</Aside>

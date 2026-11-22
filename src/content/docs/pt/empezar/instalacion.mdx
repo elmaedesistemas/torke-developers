@@ -5,7 +5,7 @@ description: Adicione o TorkeKit com Swift Package Manager no iOS ou com Gradle 
 
 import { Steps, TabItem, Tabs, Aside } from '@astrojs/starlight/components';
 
-A versão atual é a **0.3.0**. As tags não levam `v`: `0.1.0`, `0.2.0`, `0.3.0`…
+A versão atual é a **0.4.0**. As tags não levam `v`: `0.1.0`, `0.2.0`, `0.3.0`, `0.4.0`…
 
 ## Adicione o pacote
 
@@ -16,7 +16,7 @@ No Xcode: **File → Add Package Dependencies…** e cole o endereço do reposit
 
 ```swift title="Package.swift"
 dependencies: [
-    .package(url: "https://github.com/elmaedesistemas/torke-kit-ios", from: "0.3.0")
+    .package(url: "https://github.com/elmaedesistemas/torke-kit-ios", from: "0.4.0")
 ],
 targets: [
     .target(name: "MeuApp", dependencies: [
@@ -48,9 +48,9 @@ dependencyResolutionManagement {
 
 ```kotlin title="app/build.gradle.kts"
 dependencies {
-    implementation("com.github.elmaedesistemas.torke-kit-android:torke-kit-sensors:0.3.0")
+    implementation("com.github.elmaedesistemas.torke-kit-android:torke-kit-sensors:0.4.0")
     // Só o núcleo, sem Android (um servidor, testes):
-    // implementation("com.github.elmaedesistemas.torke-kit-android:torke-kit:0.3.0")
+    // implementation("com.github.elmaedesistemas.torke-kit-android:torke-kit:0.4.0")
 }
 ```
 

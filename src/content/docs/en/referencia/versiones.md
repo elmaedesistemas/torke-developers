@@ -5,6 +5,14 @@ description: What each TorkeKit release brings, for iOS and Android.
 
 iOS and Android ship together, with the same number and the same results. Tags have no `v`.
 
+## 0.4.0 · November 22, 2026
+
+Track tools, phone-only. See [Track tools](/en/guias/pista/).
+
+- **Christmas tree:** Pro and Sportsman, the reaction time from the stage beam, red light and package (`ChristmasTree`, `Reaction`).
+- **Lap timer:** start/finish line, sectors, live delta against the best lap and predicted lap (`LapTimer`).
+- **Geofences:** circles and polygons, and where a run was made (`Geofence`, `TorkeRun.check`).
+
 ## 0.3.0 · November 22, 2026
 
 Validation with timeslips and the most from the phone's GPS.

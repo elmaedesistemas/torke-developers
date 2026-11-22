@@ -5,6 +5,14 @@ description: O que cada versão do TorkeKit traz, para iOS e Android.
 
 iOS e Android saem juntos, com o mesmo número e os mesmos resultados. As tags não levam `v`.
 
+## 0.4.0 · 22 de novembro de 2026
+
+Ferramentas de pista, só com o celular. Veja [Ferramentas de pista](/pt/guias/pista/).
+
+- **Árvore:** Pro e Sportsman, o tempo de reação desde o feixe de largada, a queima de largada e o *package* (`ChristmasTree`, `Reaction`).
+- **Cronômetro de voltas:** linha de chegada, setores, delta ao vivo contra a melhor volta e volta projetada (`LapTimer`).
+- **Geocercas:** círculos e polígonos, e onde uma arrancada foi feita (`Geofence`, `TorkeRun.check`).
+
 ## 0.3.0 · 22 de novembro de 2026
 
 Validação com tickets e o máximo do GPS do celular.

@@ -1,0 +1,171 @@
+---
+title: Ferramentas de pista
+description: Árvore na tela com tempo de reação, cronômetro de voltas com setores e delta ao vivo, e geocercas para decidir onde uma arrancada vale.
+---
+
+import { TabItem, Tabs, Aside } from '@astrojs/starlight/components';
+
+Três ferramentas que funcionam só com o celular: uma **árvore** com tempo de reação como a da pista, um **cronômetro de voltas** para circuitos e **geocercas** para saber onde cada arrancada foi feita.
+
+## Árvore e tempo de reação
+
+O seu app desenha a árvore; o TorkeKit calcula quando cada luz acende e, depois da arrancada, o tempo de reação.
+
+| Árvore | Amarelas | Verde |
+| --- | --- | --- |
+| **Pro** (`.400`) | As três juntas | 0,4 s depois |
+| **Sportsman** (`.500`) | Uma a cada 0,5 s | 0,5 s depois da última |
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+// Quando chega .armed (o carro está na linha):
+let tree = ChristmasTree.start(type: .pro, stagedAt: ProcessInfo.processInfo.systemUptime)
+
+// Desenhe as luzes na hora certa: tree.lit(at: agora) diz quais estão acesas
+for light in tree.lights { schedule(light.kind, at: light.time) }
+
+// Depois da arrancada:
+if let reaction = result.reaction(on: tree) {
+    reaction.time          // segundos desde o verde; negativo = queima de largada
+    reaction.isPerfect     // a menos de meio milissegundo
+}
+result.package(on: tree)   // reação + 1/4 de milha
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+// Quando chega RunEvent.Armed (o carro está na linha):
+val tree = ChristmasTree.start(TreeType.pro, stagedAt = SystemClock.elapsedRealtimeNanos() / 1e9)
+
+// Desenhe as luzes na hora certa: tree.lit(agora) diz quais estão acesas
+tree.lights.forEach { schedule(it.kind, it.time) }
+
+// Depois da arrancada:
+result.reaction(tree)?.let { reaction ->
+    reaction.time          // segundos desde o verde; negativo = queima de largada
+    reaction.isPerfect     // a menos de meio milissegundo
+}
+result.packageTime(tree)   // reação + 1/4 de milha
+```
+
+</TabItem>
+</Tabs>
+
+<Aside type="note" title="Desde o feixe de largada">
+Como na pista, a reação conta do verde até o carro sair do feixe de largada: a largada mais o pé de rollout (`leftStageAt`). As luzes usam o mesmo relógio dos sensores (`systemUptime` no iOS, `elapsedRealtime` no Android), então não há defasagem.
+</Aside>
+
+`ChristmasTree.start` espera entre 0,6 e 1,1 s ao acaso antes de acender, como a partida automática da pista. Para uma queima de largada na hora use `tree.estimatedReaction(launchedAt:)` com o evento `launched`; o valor exato chega quando a arrancada termina.
+
+## Cronômetro de voltas
+
+Para circuitos: uma linha de chegada, linhas de setor opcionais e cada dado do GPS. O TorkeKit interpola o cruzamento entre dois dados, então até um GPS de 1 Hz mede a volta no décimo.
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+let chegada = TimingLine(a: bordaEsquerda, b: bordaDireita, name: "Chegada")
+let timer = LapTimer(start: chegada, sectors: [setor1, setor2])
+
+// Com cada dado do GPS (dos eventos da RunSession ou do seu próprio provedor)
+for event in timer.process(fix) {
+    switch event {
+    case .started: show("Valendo!")
+    case .sector(let i, let time): show("Setor \(i + 1): \(time) s")
+    case .lap(let lap): show("Volta \(lap.number): \(lap.time) s")
+    }
+}
+timer.delta          // contra a melhor volta na mesma distância: negativo = ganhando
+timer.predictedLap   // a melhor volta + o delta
+timer.bestLap
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val chegada = TimingLine(bordaEsquerda, bordaDireita, name = "Chegada")
+val timer = LapTimer(chegada, listOf(setor1, setor2))
+
+// Com cada dado do GPS
+timer.process(fix).forEach { event ->
+    when (event) {
+        is LapEvent.Started -> show("Valendo!")
+        is LapEvent.Sector -> show("Setor ${event.index + 1}: ${event.time} s")
+        is LapEvent.Completed -> show("Volta ${event.lap.number}: ${event.lap.time} s")
+    }
+}
+timer.delta          // contra a melhor volta na mesma distância: negativo = ganhando
+timer.predictedLap   // a melhor volta + o delta
+timer.bestLap
+```
+
+</TabItem>
+</Tabs>
+
+| `Lap` | O que é |
+| --- | --- |
+| `number` | 1 para a primeira volta completa (o primeiro cruzamento só inicia o cronômetro). |
+| `time` | Segundos. |
+| `sectors` | O tempo de cada setor; somam a volta. Vazio sem linhas de setor. |
+| `distance` | Metros percorridos segundo o GPS. |
+
+<Aside type="tip" title="Desenhe as linhas um pouco largas">
+Cada linha vai de uma borda da pista à outra, com alguns metros a mais de cada lado para todas as voltas cruzarem. Um cruzamento repetido em menos de `minimumLapTime` (10 s) é ignorado: é o GPS pulando sobre a linha.
+</Aside>
+
+## Geocercas
+
+Um círculo ou um polígono no mapa: a pista, o paddock de um evento. Servem para decidir se uma arrancada vale.
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+let pista = Geofence.circle(center: Coordinate(latitude: 9.9412, longitude: -84.2005), radius: 400, name: "La Guácima")
+let paddock = Geofence.polygon([p1, p2, p3, p4], name: "Paddock")
+
+pista.contains(coordenada)
+[pista, paddock].first(containing: run.startLocation!)   // em qual pista largou
+
+if let check = run.check(pista) {
+    check.startInside    // largou dentro
+    check.shareInside    // quanto da arrancada foi dentro, 0 a 1
+    check.allInside
+}
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val pista = Geofence.circle(Coordinate(9.9412, -84.2005), 400.0, name = "La Guácima")
+val paddock = Geofence.polygon(listOf(p1, p2, p3, p4), name = "Paddock")
+
+coordenada in pista
+listOf(pista, paddock).firstContaining(run.startLocation!!)   // em qual pista largou
+
+run.check(pista)?.let { check ->
+    check.startInside    // largou dentro
+    check.shareInside    // quanto da arrancada foi dentro, 0 a 1
+    check.allInside
+}
+```
+
+</TabItem>
+</Tabs>
+
+As geocercas e as linhas são JSON simples, o mesmo no iOS e no Android: o seu app pode baixar as pistas de um servidor.
+
+```json
+{ "kind": "circle", "name": "La Guácima", "center": { "latitude": 9.9412, "longitude": -84.2005 }, "radius": 400 }
+```
+
+<Aside type="caution" title="A decisão final, no servidor">
+O app pode avisar ao vivo se você está na pista, mas para um ranking confira de novo a gravação no seu servidor com `check`: o celular do usuário não é uma fonte confiável.
+</Aside>
