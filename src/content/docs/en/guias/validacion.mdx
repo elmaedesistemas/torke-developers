@@ -1,0 +1,150 @@
+---
+title: Validating with timeslips
+description: Compare TorkeKit's times with the track's timeslip, mark by mark, with torke-validate as a library or a command.
+---
+
+import { TabItem, Tabs, Aside, Steps } from '@astrojs/starlight/components';
+
+How close is TorkeKit to the track's timer? `torke-validate` answers with your own runs: it analyzes each recording again and compares it, mark by mark, with its **timeslip**. With several runs it gives the bias, the typical error and the worst case of each mark, and whether it meets the accuracy targets.
+
+## Collecting the data
+
+<Steps>
+
+1. **Time runs at the track with TorkeKit** and save each one with `session.recording()` (the `.torkerun.json` file).
+2. **Keep the timeslip** of that same run: a photo is enough to copy the numbers later.
+3. **Put both together** in a `torke.validation` file (format below), or pass the timeslip straight to the command.
+
+</Steps>
+
+<Aside type="note" title="From the staging beam">
+Timeslip times count from when the car leaves the staging beam, without reaction time. TorkeKit discounts the same one-foot rollout, so they compare directly.
+</Aside>
+
+## In code
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+let slip = Timeslip(sixtyFeet: 2.12, quarterMile: 12.91, quarterMileSpeed: 114.2, speedUnit: .mph)
+
+// One run: measured, timeslip and error per mark
+let comparison = run.compare(with: slip)
+
+// Many runs: statistics per mark
+let report = ValidationReport([("Run 1", run.analyze(), slip), ("Run 2", other.analyze(), slip2)])
+for s in report.summaries {
+    print(s.mark, s.bias, s.rms, s.worst, s.passed)
+}
+report.passed      // every mark within its target
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val slip = Timeslip(sixtyFeet = 2.12, quarterMile = 12.91, quarterMileSpeed = 114.2, speedUnit = SpeedUnit.mph)
+
+// One run: measured, timeslip and error per mark
+val comparison = run.compare(slip)
+
+// Many runs: statistics per mark
+val report = ValidationReport.of(listOf(
+    ValidationInput("Run 1", run.analyze(), slip),
+    ValidationInput("Run 2", other.analyze(), slip2),
+))
+report.summaries.forEach { println("${it.mark} ${it.bias} ${it.rms} ${it.worst} ${it.passed}") }
+report.passed      // every mark within its target
+```
+
+</TabItem>
+</Tabs>
+
+| Per mark | Meaning |
+| --- | --- |
+| `bias` | The mean error, signed: whether TorkeKit always reads a bit slow or fast. |
+| `meanAbsolute` | The mean error, unsigned. |
+| `rms` | The typical error. It's the one checked against the target. |
+| `worst` | The worst error, signed. |
+| `passed` | `rms` within the target. |
+
+The error is **TorkeKit minus the timeslip**: for times, positive means TorkeKit read slower; for speeds, faster.
+
+## From the terminal
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+On a Mac with Xcode, from the `torke-kit-ios` folder:
+
+```bash
+swift run torke-validate my-runs.json --runs
+swift run torke-validate run.torkerun.json --60ft 2.12 --1/4 12.91 --1/4-speed 114.2 --mph
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+On any computer with Java 17, from the `torke-kit-android` folder:
+
+```bash
+./gradlew :torke-validate:installDist
+torke-validate/build/install/torke-validate/bin/torke-validate my-runs.json --runs
+```
+
+</TabItem>
+</Tabs>
+
+```text title="Output"
+TorkeKit validation · 1 run
+
+Mark        Runs      Bias  Mean |e|       RMS     Worst    Target
+60 ft          1    -0.006     0.006     0.006    -0.006    ±0.100  ok
+330 ft         1    +0.027     0.027     0.027    +0.027    ±0.120  ok
+1/8 mile       1    +0.039     0.039     0.039    +0.039    ±0.120  ok
+1/8 speed      1     +0.06      0.06      0.06     +0.06     ±3.00  ok
+1000 ft        1    +0.027     0.027     0.027    +0.027    ±0.150  ok
+1/4 mile       1    +0.022     0.022     0.022    +0.022    ±0.150  ok
+1/4 speed      1     +0.27      0.27      0.27     +0.27     ±3.00  ok
+
+PASS: every mark is within its target.
+```
+
+| Option | What it does |
+| --- | --- |
+| `--60ft`, `--330ft`, `--1/8`, `--1000ft`, `--1/4` | Timeslip times, for a single run. |
+| `--1/8-speed`, `--1/4-speed` | Timeslip speeds; in km/h, or mph with `--mph`. |
+| `--runs` | Shows every run, mark by mark. |
+| `--json` | The report as JSON, for scripts. |
+| `--stored` | Uses the saved result instead of analyzing again. |
+
+It exits with **0** when every mark passes, **1** when not and **2** when something is missing. It fits in CI: if a change to the engine makes the times worse, the check fails.
+
+## The validation file
+
+```json title="my-runs.json"
+{
+  "format": "torke.validation",
+  "version": 1,
+  "runs": [
+    { "run": "runs/first.torkerun.json", "label": "Run 1",
+      "timeslip": { "sixtyFeet": 2.12, "eighthMile": 8.55, "eighthMileSpeed": 89.9,
+                    "quarterMile": 12.91, "quarterMileSpeed": 114.2, "speedUnit": "mph" } }
+  ]
+}
+```
+
+| Field | What it is |
+| --- | --- |
+| `runs[].run` | The recording, relative to the validation file. |
+| `timeslip` | Whatever the slip has: `sixtyFeet`, `threeThirtyFeet`, `eighthMile`, `eighthMileSpeed`, `thousandFeet`, `quarterMile`, `quarterMileSpeed`. |
+| `speedUnit` | `"kmh"` (default) or `"mph"`. |
+| `reactionTime`, `notes` | For your notes: not compared. |
+| `targets` | Optional: your own targets per mark. |
+
+The default targets are TorkeKit's: 60 ft ±0.10 s, 330 ft and 1/8 ±0.12 s, 1000 ft and 1/4 ±0.15 s, speeds ±3 km/h.
+
+<Aside type="tip" title="Send us your timeslips">
+Every set of runs with timeslips helps us validate the engine with real data. If you want to share yours, open an issue in the [repository](https://github.com/elmaedesistemas/torke-kit-ios/issues).
+</Aside>

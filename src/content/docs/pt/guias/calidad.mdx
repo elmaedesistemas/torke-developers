@@ -77,7 +77,7 @@ Além da nota, a `RunQuality` traz o que mediu, caso você queira mostrar ou usa
 ```swift
 var limits = RunQuality.Limits()
 limits.maxSlope = 0.005          // mais rígido: 0,5 %
-limits.minGpsRate = 4            // exija um GPS externo de 5 Hz ou mais
+limits.minGpsRate = 4            // só celulares com GPS de 5 Hz ou mais
 let quality = RunQuality.assess(run, limits: limits)
 ```
 
@@ -87,7 +87,7 @@ let quality = RunQuality.assess(run, limits: limits)
 ```kotlin
 val limits = RunQuality.Limits(
     maxSlope = 0.005,            // mais rígido: 0,5 %
-    minGpsRate = 4.0,            // exija um GPS externo de 5 Hz ou mais
+    minGpsRate = 4.0,            // só celulares com GPS de 5 Hz ou mais
 )
 val quality = RunQuality.assess(run, limits)
 ```

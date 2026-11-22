@@ -1,6 +1,6 @@
 ---
 title: Roadmap
-description: 'O que o TorkeKit já traz e o que vem por aí: GPS externo, validação contra tickets, árvore, cronômetro de voltas e geocercas.'
+description: 'O que o TorkeKit já traz e o que vem por aí: árvore, cronômetro de voltas e geocercas.'
 ---
 
 ## ✅ Fase 1 · O núcleo aberto (0.1)
@@ -13,10 +13,11 @@ Motor (calibração de eixos, filtro de velocidade, análise), `RunSession` com 
 
 Ficou para depois: a migração do centro instantâneo com o curso da suspensão, e aprender o efeito do acerto com as arrancadas de muitos carros.
 
-## Fase 3 · GPS externo e validação
+## ✅ Fase 3 · Validação e o GPS do celular (0.3)
 
-- **GPS externo por Bluetooth:** receptores de 10 a 25 Hz para um quarto de milha mais preciso.
-- **`torke-validate`:** comparar os tempos do SDK com tickets de pista ou com um registrador GPS de referência.
+`torke-validate` para comparar com tickets de pista (biblioteca e comando), a taxa real do GPS ao vivo, rastreamento GNSS completo com satélites e sinal no Android, e o barômetro para a pressão da estação.
+
+O TorkeKit fica só com o celular: sem receptores externos nem outro hardware.
 
 ## Fase 4 · Ferramentas de pista
 

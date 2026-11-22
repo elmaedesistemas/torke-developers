@@ -77,7 +77,7 @@ Besides the grade, `RunQuality` carries what it measured, in case you want to sh
 ```swift
 var limits = RunQuality.Limits()
 limits.maxSlope = 0.005          // stricter: 0.5 %
-limits.minGpsRate = 4            // require a 5 Hz or faster external GPS
+limits.minGpsRate = 4            // only phones with a 5 Hz or faster GPS
 let quality = RunQuality.assess(run, limits: limits)
 ```
 
@@ -87,7 +87,7 @@ let quality = RunQuality.assess(run, limits: limits)
 ```kotlin
 val limits = RunQuality.Limits(
     maxSlope = 0.005,            // stricter: 0.5 %
-    minGpsRate = 4.0,            // require a 5 Hz or faster external GPS
+    minGpsRate = 4.0,            // only phones with a 5 Hz or faster GPS
 )
 val quality = RunQuality.assess(run, limits)
 ```

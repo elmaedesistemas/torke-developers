@@ -25,10 +25,19 @@ Además, iOS y Android tienen que dar **el mismo resultado** con las mismas mues
 | Pista plana | Pendiente (la gravedad se cuela como aceleración) |
 | Un segundo quieto antes de salir | Salir rodando |
 
-## Lo que falta
+## El GPS del teléfono
 
-Las metas de arriba se verifican con corridas simuladas. La **validación contra boletas de pista** (corridas reales medidas a la vez con TorkeKit y con el cronómetro de la pista) está en el [roadmap](/referencia/roadmap/) como `torke-validate`.
+TorkeKit funciona solo con el teléfono, sin receptores externos ni otro hardware. Para sacarle el máximo al GPS que trae:
+
+- **La tasa real.** `snapshot.gpsRate` dice cuántos datos por segundo da el GPS de cada teléfono: 1 en iPhone y en la mayoría de los Android, 5 a 10 en algunos. El motor aprovecha todos los que lleguen.
+- **Seguimiento completo en Android.** Desde Android 12, `PhoneSensorProvider` le pide al chip GNSS que siga todos los satélites sin pausas para ahorrar batería mientras graba. Los datos salen más parejos; gasta un poco más de batería. `PhoneSensorProvider(context, fullTracking = false)` lo apaga.
+- **Satélites y señal en Android.** `phone.gnss` dice cuántos satélites usa el GPS, cuántos ve y su señal promedio (C/N0). A cielo abierto un teléfono usa 15 o más a 30–40 dB-Hz; con menos, la velocidad es menos precisa.
+- **Por qué no el Doppler crudo.** El chip ya calcula la velocidad con el efecto Doppler de los satélites; recalcularla a mano exige las efemérides de cada satélite y no la mejora.
+
+## Comprobalo con tus corridas
+
+Las metas de arriba se verifican con corridas simuladas. Con corridas reales y sus boletas, [`torke-validate`](/guias/validacion/) te dice cuánto se equivoca TorkeKit en cada marca.
 
 <Aside type="tip" title="¿Tenés boletas?">
-Si medís corridas en pista con TorkeKit, guardá la grabación (`.torkerun.json`) junto a la foto de la boleta. Son justo los datos que necesitamos para validar el motor: abrí un issue en el [repositorio](https://github.com/elmaedesistemas/torke-kit-ios/issues).
+Si medís corridas en pista con TorkeKit, guardá la grabación (`.torkerun.json`) junto a la foto de la boleta y pasalas por `torke-validate`. Si querés compartirlas para mejorar el motor, abrí un issue en el [repositorio](https://github.com/elmaedesistemas/torke-kit-ios/issues).
 </Aside>

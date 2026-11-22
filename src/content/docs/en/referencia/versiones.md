@@ -5,6 +5,15 @@ description: What each TorkeKit release brings, for iOS and Android.
 
 iOS and Android ship together, with the same number and the same results. Tags have no `v`.
 
+## 0.3.0 · November 22, 2026
+
+Validation with timeslips and the most from the phone's GPS.
+
+- **Validation:** `Timeslip`, `RunComparison`, `ValidationReport` and the `torke.validation` JSON, with the `torke-validate` command in Kotlin/JVM and Swift. See [Validating with timeslips](/en/guias/validacion/).
+- **GPS:** `RunSnapshot.gpsRate`, the fixes per second each phone gives. On Android, full GNSS tracking and satellites and signal (`GnssInfo`).
+- **Barometer:** `PhoneBarometer` for the station pressure.
+- `DragDistance` adds 330 ft.
+
 ## 0.2.0 · November 21, 2026
 
 More measurements, run quality and suspension geometry.

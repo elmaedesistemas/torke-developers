@@ -51,6 +51,35 @@ corrected.quarterMile            // el 1/4 en aire estándar
 `pressureHpa` es la presión **real en la pista**. Las apps del clima suelen mostrar la presión al nivel del mar, que en una pista alta da un valor muy distinto. Usá un barómetro, el del teléfono (`CMAltimeter` en iOS, el sensor `TYPE_PRESSURE` en Android) o una estación meteorológica cercana.
 </Aside>
 
+### La presión, del barómetro del teléfono
+
+Casi todos los teléfonos de gama media y alta tienen barómetro, y todos los iPhone desde el 6. `PhoneBarometer` lee la presión de la estación ahí mismo, en la pista:
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+import TorkeKitSensors
+
+if PhoneBarometer.isAvailable, let hpa = await PhoneBarometer().stationPressureHpa() {
+    let weather = Weather(temperatureC: 31, humidity: 70, pressureHpa: hpa)
+}
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val barometer = PhoneBarometer(context)
+val hpa = if (barometer.isAvailable) barometer.stationPressureHpa() else null
+hpa?.let { Weather(temperatureC = 31.0, humidity = 70.0, pressureHpa = it) }
+```
+
+</TabItem>
+</Tabs>
+
+La temperatura y la humedad las pone tu app (de una estación del clima o del usuario): los teléfonos no traen esos sensores.
+
 Los tiempos se corrigen con la raíz cúbica de la potencia (`tiempo × factor^-1/3`) y las velocidades al revés (`velocidad × factor^1/3`). El recorrido (`trace`) queda como se midió.
 
 ## Potencia estimada

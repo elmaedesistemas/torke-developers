@@ -5,6 +5,15 @@ description: O que cada versão do TorkeKit traz, para iOS e Android.
 
 iOS e Android saem juntos, com o mesmo número e os mesmos resultados. As tags não levam `v`.
 
+## 0.3.0 · 22 de novembro de 2026
+
+Validação com tickets e o máximo do GPS do celular.
+
+- **Validação:** `Timeslip`, `RunComparison`, `ValidationReport` e o JSON `torke.validation`, com o comando `torke-validate` em Kotlin/JVM e em Swift. Veja [Validação com tickets](/pt/guias/validacion/).
+- **GPS:** `RunSnapshot.gpsRate`, os dados por segundo que cada celular dá. No Android, rastreamento GNSS completo e satélites e sinal (`GnssInfo`).
+- **Barômetro:** `PhoneBarometer` para a pressão da estação.
+- `DragDistance` ganha os 330 pés.
+
 ## 0.2.0 · 21 de novembro de 2026
 
 Mais medições, qualidade da arrancada e geometria de suspensão.

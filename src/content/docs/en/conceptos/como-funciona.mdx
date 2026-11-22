@@ -45,4 +45,4 @@ During the run, the session only has the data up to that instant. When it finish
 
 - **Rigid mount.** If the phone shakes or moves, the accelerometer measures the mount, not the car. `RunQuality` detects it (`looseMount`, `phoneMoved`).
 - **Open sky.** The GPS needs to see satellites. Under a roof or between buildings its accuracy drops (`inaccurateGPS`).
-- **A faster GPS helps.** A 10 Hz Bluetooth receiver improves the quarter mile; it's coming in [phase 3](/en/referencia/roadmap/).
+- **A faster GPS helps.** Some Android phones give 5 or 10 fixes per second; `snapshot.gpsRate` says how many each phone gives. See [Accuracy](/en/conceptos/precision/#the-phones-gps).

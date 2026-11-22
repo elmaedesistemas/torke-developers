@@ -25,10 +25,19 @@ On top of that, iOS and Android must give **the same result** from the same samp
 | Flat strip | Slope (gravity leaks in as acceleration) |
 | One second still before launching | Rolling off the line |
 
-## What's missing
+## The phone's GPS
 
-The targets above are checked with simulated runs. **Validation against dragstrip timeslips** (real runs timed by TorkeKit and by the track's timer at once) is on the [roadmap](/en/referencia/roadmap/) as `torke-validate`.
+TorkeKit works with the phone alone, without external receivers or other hardware. To get the most from the GPS it has:
+
+- **The real rate.** `snapshot.gpsRate` says how many fixes per second each phone's GPS gives: 1 on iPhone and most Android phones, 5 to 10 on some. The engine uses every fix that arrives.
+- **Full tracking on Android.** From Android 12, `PhoneSensorProvider` asks the GNSS chip to track every satellite without power-saving gaps while recording. Fixes come steadier; it uses a bit more battery. `PhoneSensorProvider(context, fullTracking = false)` turns it off.
+- **Satellites and signal on Android.** `phone.gnss` says how many satellites the GPS uses, how many it sees and their mean signal (C/N0). Under open sky a phone uses 15 or more at 30–40 dB-Hz; with fewer, the speed is less accurate.
+- **Why not raw Doppler.** The chip already computes the speed from the satellites' Doppler shift; recomputing it by hand needs each satellite's ephemeris and doesn't improve it.
+
+## Check it with your runs
+
+The targets above are checked with simulated runs. With real runs and their timeslips, [`torke-validate`](/en/guias/validacion/) tells you how far off TorkeKit is at each mark.
 
 <Aside type="tip" title="Got timeslips?">
-If you time runs at the track with TorkeKit, keep the recording (`.torkerun.json`) together with a photo of the timeslip. That's exactly the data we need to validate the engine: open an issue in the [repository](https://github.com/elmaedesistemas/torke-kit-ios/issues).
+If you time runs at the track with TorkeKit, keep the recording (`.torkerun.json`) with a photo of the timeslip and run them through `torke-validate`. If you want to share them to improve the engine, open an issue in the [repository](https://github.com/elmaedesistemas/torke-kit-ios/issues).
 </Aside>

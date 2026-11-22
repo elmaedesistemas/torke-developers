@@ -25,10 +25,19 @@ Além disso, iOS e Android precisam dar **o mesmo resultado** com as mesmas amos
 | Pista plana | Inclinação (a gravidade entra como aceleração) |
 | Um segundo parado antes de largar | Largar rolando |
 
-## O que falta
+## O GPS do celular
 
-As metas acima são verificadas com arrancadas simuladas. A **validação contra tickets de pista** (arrancadas reais medidas ao mesmo tempo pelo TorkeKit e pelo cronômetro da pista) está no [roadmap](/pt/referencia/roadmap/) como `torke-validate`.
+O TorkeKit funciona só com o celular, sem receptores externos nem outro hardware. Para tirar o máximo do GPS que ele tem:
+
+- **A taxa real.** `snapshot.gpsRate` diz quantos dados por segundo o GPS de cada celular dá: 1 no iPhone e na maioria dos Android, 5 a 10 em alguns. O motor aproveita todos os que chegarem.
+- **Rastreamento completo no Android.** A partir do Android 12, o `PhoneSensorProvider` pede ao chip GNSS que rastreie todos os satélites sem pausas para economizar bateria enquanto grava. Os dados saem mais estáveis; gasta um pouco mais de bateria. `PhoneSensorProvider(context, fullTracking = false)` desliga.
+- **Satélites e sinal no Android.** `phone.gnss` diz quantos satélites o GPS usa, quantos vê e o sinal médio (C/N0). Com céu aberto um celular usa 15 ou mais a 30–40 dB-Hz; com menos, a velocidade é menos precisa.
+- **Por que não o Doppler bruto.** O chip já calcula a velocidade pelo efeito Doppler dos satélites; recalcular à mão exige as efemérides de cada satélite e não melhora.
+
+## Confira com as suas arrancadas
+
+As metas acima são verificadas com arrancadas simuladas. Com arrancadas reais e os tickets, o [`torke-validate`](/pt/guias/validacion/) diz quanto o TorkeKit erra em cada marca.
 
 <Aside type="tip" title="Tem tickets?">
-Se você mede arrancadas na pista com o TorkeKit, guarde a gravação (`.torkerun.json`) junto com a foto do ticket. São exatamente os dados de que precisamos para validar o motor: abra uma issue no [repositório](https://github.com/elmaedesistemas/torke-kit-ios/issues).
+Se você mede arrancadas na pista com o TorkeKit, guarde a gravação (`.torkerun.json`) com a foto do ticket e passe pelo `torke-validate`. Se quiser compartilhar para melhorar o motor, abra uma issue no [repositório](https://github.com/elmaedesistemas/torke-kit-ios/issues).
 </Aside>

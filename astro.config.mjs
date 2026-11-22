@@ -75,6 +75,7 @@ export default defineConfig({
 						{ label: 'Más mediciones', translations: { en: 'More measurements', 'pt-BR': 'Mais medições' }, slug: 'guias/mediciones' },
 						{ label: 'Clima y potencia', translations: { en: 'Weather and power', 'pt-BR': 'Clima e potência' }, slug: 'guias/clima-y-potencia' },
 						{ label: 'Calidad de la corrida', translations: { en: 'Run quality', 'pt-BR': 'Qualidade da arrancada' }, slug: 'guias/calidad' },
+						{ label: 'Validación con boletas', translations: { en: 'Validating with timeslips', 'pt-BR': 'Validação com tickets' }, slug: 'guias/validacion', badge: { text: '0.3', variant: 'note' } },
 						{ label: 'Suspensión', translations: { en: 'Suspension', 'pt-BR': 'Suspensão' }, slug: 'guias/suspension', badge: { text: 'Lab', variant: 'success' } },
 					],
 				},

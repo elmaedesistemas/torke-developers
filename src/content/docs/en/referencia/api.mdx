@@ -28,7 +28,7 @@ Names are the same on both platforms, except where the table says otherwise. In 
 
 ### RunSnapshot
 
-`phase`, `speed`, `speedKmh`, `elapsed`, `distance`, `gpsAccuracy`, `location`, `startLocation`, `mode`, `result`, `interval`. See [The live session](/en/guias/sesion/#what-the-snapshot-holds).
+`phase`, `speed`, `speedKmh`, `elapsed`, `distance`, `gpsAccuracy`, `location`, `startLocation`, `mode`, `result`, `interval`, `gpsRate`. See [The live session](/en/guias/sesion/#what-the-snapshot-holds).
 
 ### RunPhase
 
@@ -91,11 +91,15 @@ Extensions: `zeroTo60mph`, `thousandFeet`, `halfMile`, `time(toKmh:)`, `time(fro
 
 ### RunDataProvider
 
-A protocol (an interface in Kotlin) with a single method: `samples()`, which delivers `SensorSample`s in time order. Implement it to plug in your own source (an external GPS, a logger).
+A protocol (an interface in Kotlin) with a single method: `samples()`, which delivers `SensorSample`s in time order. Implement it to plug in your own source (a file from another tool, test data).
 
 ### PhoneSensorProvider
 
-The phone's sensors. iOS: `PhoneSensorProvider()` and `await requestPermission()`. Android: `PhoneSensorProvider(context)`, with `ACCESS_FINE_LOCATION` already granted.
+The phone's sensors. iOS: `PhoneSensorProvider()` and `await requestPermission()`. Android: `PhoneSensorProvider(context, fullTracking)`, with `ACCESS_FINE_LOCATION` already granted; `gnss` (`StateFlow<GnssInfo?>`: `satellitesInFix`, `satellitesVisible`, `meanCn0`).
+
+### PhoneBarometer
+
+The station pressure for `Weather`: `isAvailable` and `stationPressureHpa()` (`async` in Swift, `suspend` in Kotlin).
 
 ### RecordedRunProvider
 
@@ -130,6 +134,21 @@ Methods: `analyze(stopDistance:)`, `rolling(fromKmh:toKmh:)`, `braking(fromKmh:)
 ### RunQuality
 
 `grade` (`good`, `fair`, `poor`), `issues`, `gpsRate`, `speedAccuracy`, `longestGpsGap`, `slope`, `tiltChange`, `disagreement`. `RunQuality.assess(run, limits:)` with `RunQuality.Limits`. See [Run quality](/en/guias/calidad/).
+
+## Validation
+
+| Type | What it is |
+| --- | --- |
+| `Timeslip` | The timeslip: `sixtyFeet`, `threeThirtyFeet`, `eighthMile`, `eighthMileSpeed`, `thousandFeet`, `quarterMile`, `quarterMileSpeed`, `speedUnit` (`kmh`, `mph`), `reactionTime`, `notes`. |
+| `ValidationMark` | The comparable marks; `isSpeed`, `value(in:)`. |
+| `MarkComparison` | `mark`, `measured`, `reference`, `error`. |
+| `RunComparison` | `label`, `marks`. Swift: `RunComparison(result:timeslip:label:)`; Kotlin: `RunComparison.of(…)`. `TorkeRun.compare(with:)` analyzes again and compares. |
+| `ValidationReport` | `runs`, `skipped`, `summaries`, `targets`, `passed`. Kotlin: `ValidationReport.of(inputs)`. |
+| `MarkSummary` | `count`, `bias`, `meanAbsolute`, `rms`, `worst`, `limit`, `passed`. |
+| `ValidationTargets` | The allowed error per mark; TorkeKit's targets by default. |
+| `ValidationSet` | The `torke.validation` JSON: `decode`, `report(relativeTo:)` (Kotlin: `report(directory)`). |
+
+See [Validating with timeslips](/en/guias/validacion/).
 
 ## Suspension
 

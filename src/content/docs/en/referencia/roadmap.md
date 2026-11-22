@@ -1,6 +1,6 @@
 ---
 title: Roadmap
-description: 'What TorkeKit already has and what comes next: external GPS, timeslip validation, the tree, a lap timer and geofences.'
+description: 'What TorkeKit already has and what comes next: the tree, a lap timer and geofences.'
 ---
 
 ## ✅ Phase 1 · The open core (0.1)
@@ -13,10 +13,11 @@ Engine (axis calibration, speed filter, analysis), `RunSession` with still, laun
 
 Left for later: instant center migration through suspension travel, and learning the setup's effect from many cars' runs.
 
-## Phase 3 · External GPS and validation
+## ✅ Phase 3 · Validation and the phone's GPS (0.3)
 
-- **External GPS over Bluetooth:** 10–25 Hz receivers for a more accurate quarter mile.
-- **`torke-validate`:** compare the SDK's times with dragstrip timeslips or a reference GPS logger.
+`torke-validate` to compare with dragstrip timeslips (library and command), the GPS's real rate live, full GNSS tracking with satellites and signal on Android, and the barometer for the station pressure.
+
+TorkeKit stays phone-only: no external receivers or other hardware.
 
 ## Phase 4 · Track tools
 

@@ -51,6 +51,35 @@ corrected.quarterMile            // the 1/4 in standard air
 `pressureHpa` is the **actual pressure at the track**. Weather apps usually show sea-level pressure, which at a high track is very different. Use a barometer, the phone's (`CMAltimeter` on iOS, the `TYPE_PRESSURE` sensor on Android) or a nearby weather station.
 </Aside>
 
+### Pressure from the phone's barometer
+
+Most mid and high range phones have a barometer, and every iPhone since the 6. `PhoneBarometer` reads the station pressure right there, at the track:
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+import TorkeKitSensors
+
+if PhoneBarometer.isAvailable, let hpa = await PhoneBarometer().stationPressureHpa() {
+    let weather = Weather(temperatureC: 31, humidity: 70, pressureHpa: hpa)
+}
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val barometer = PhoneBarometer(context)
+val hpa = if (barometer.isAvailable) barometer.stationPressureHpa() else null
+hpa?.let { Weather(temperatureC = 31.0, humidity = 70.0, pressureHpa = it) }
+```
+
+</TabItem>
+</Tabs>
+
+Temperature and humidity come from your app (a weather station or the user): phones don't have those sensors.
+
 Times are corrected with the cube root of power (`time × factor^-1/3`) and speeds the other way (`speed × factor^1/3`). The trace stays as measured.
 
 ## Estimated power

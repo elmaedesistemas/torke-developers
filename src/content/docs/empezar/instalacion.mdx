@@ -5,7 +5,7 @@ description: Agregá TorkeKit con Swift Package Manager en iOS o con Gradle y Ji
 
 import { Steps, TabItem, Tabs, Aside } from '@astrojs/starlight/components';
 
-La versión actual es **0.2.0**. Las etiquetas no llevan `v`: `0.1.0`, `0.2.0`…
+La versión actual es **0.3.0**. Las etiquetas no llevan `v`: `0.1.0`, `0.2.0`, `0.3.0`…
 
 ## Agregá el paquete
 
@@ -16,7 +16,7 @@ En Xcode: **File → Add Package Dependencies…** y pegá la dirección del rep
 
 ```swift title="Package.swift"
 dependencies: [
-    .package(url: "https://github.com/elmaedesistemas/torke-kit-ios", from: "0.2.0")
+    .package(url: "https://github.com/elmaedesistemas/torke-kit-ios", from: "0.3.0")
 ],
 targets: [
     .target(name: "MiApp", dependencies: [
@@ -29,7 +29,7 @@ targets: [
 | Producto | Qué trae | Depende de |
 | --- | --- | --- |
 | `TorkeKit` | El motor, `RunSession`, el formato `torke.run`, `RecordedRunProvider`, `DemoRun` | Solo Foundation (iOS 17, macOS 14) |
-| `TorkeKitSensors` | `PhoneSensorProvider` (CoreMotion + CoreLocation) | iOS |
+| `TorkeKitSensors` | `PhoneSensorProvider` (CoreMotion + CoreLocation), `PhoneBarometer` | iOS |
 
 </TabItem>
 <TabItem label="Kotlin">
@@ -48,16 +48,17 @@ dependencyResolutionManagement {
 
 ```kotlin title="app/build.gradle.kts"
 dependencies {
-    implementation("com.github.elmaedesistemas.torke-kit-android:torke-kit-sensors:0.2.0")
+    implementation("com.github.elmaedesistemas.torke-kit-android:torke-kit-sensors:0.3.0")
     // Solo el núcleo, sin Android (un servidor, pruebas):
-    // implementation("com.github.elmaedesistemas.torke-kit-android:torke-kit:0.2.0")
+    // implementation("com.github.elmaedesistemas.torke-kit-android:torke-kit:0.3.0")
 }
 ```
 
 | Módulo | Qué trae | Depende de |
 | --- | --- | --- |
 | `torke-kit` | El motor, `RunSession`, el formato `torke.run`, `RecordedRunProvider`, `DemoRun` | Kotlin (JVM), coroutines, kotlinx.serialization |
-| `torke-kit-sensors` | `PhoneSensorProvider` (SensorManager + LocationManager) | Android, `minSdk 26` |
+| `torke-kit-sensors` | `PhoneSensorProvider` (SensorManager + LocationManager), `PhoneBarometer` | Android, `minSdk 26` |
+| `torke-validate` | El comando de validación | Java 17 |
 
 </TabItem>
 </Tabs>

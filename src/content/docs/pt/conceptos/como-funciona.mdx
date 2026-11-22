@@ -45,4 +45,4 @@ Durante a arrancada, a sessão só tem os dados até aquele instante. Ao termina
 
 - **Suporte rígido.** Se o celular vibra ou se mexe, o acelerômetro mede o suporte e não o carro. A `RunQuality` detecta isso (`looseMount`, `phoneMoved`).
 - **Céu aberto.** O GPS precisa ver os satélites. Embaixo de cobertura ou entre prédios a precisão cai (`inaccurateGPS`).
-- **Um GPS mais rápido ajuda.** Com um receptor de 10 Hz por Bluetooth o quarto de milha melhora; está na [fase 3](/pt/referencia/roadmap/).
+- **Um GPS mais rápido ajuda.** Alguns Android dão 5 ou 10 dados por segundo; `snapshot.gpsRate` diz quantos cada celular dá. Veja [Precisão](/pt/conceptos/precision/#o-gps-do-celular).

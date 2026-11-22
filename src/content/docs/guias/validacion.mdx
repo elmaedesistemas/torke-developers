@@ -1,0 +1,150 @@
+---
+title: Validación con boletas
+description: Compará los tiempos de TorkeKit con la boleta de la pista, marca por marca, con torke-validate como biblioteca o como comando.
+---
+
+import { TabItem, Tabs, Aside, Steps } from '@astrojs/starlight/components';
+
+¿Qué tan cerca está TorkeKit del cronómetro de la pista? `torke-validate` lo responde con tus propias corridas: analiza de nuevo cada grabación y la compara, marca por marca, con su **boleta**. Con varias corridas te da el sesgo, el error típico y el peor caso de cada marca, y si cumple las metas de precisión.
+
+## Cómo juntar los datos
+
+<Steps>
+
+1. **Medí en la pista con TorkeKit** y guardá cada corrida con `session.recording()` (el archivo `.torkerun.json`).
+2. **Guardá la boleta** de esa misma corrida: una foto basta para después pasar los números.
+3. **Anotá las dos cosas juntas** en un archivo `torke.validation` (abajo está el formato), o pasá la boleta directo al comando.
+
+</Steps>
+
+<Aside type="note" title="Desde el haz de salida">
+Los tiempos de la boleta cuentan desde que el carro deja el haz de salida, sin el tiempo de reacción. TorkeKit descuenta el mismo pie de rollout, así que se comparan directo.
+</Aside>
+
+## En código
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+let slip = Timeslip(sixtyFeet: 2.12, quarterMile: 12.91, quarterMileSpeed: 114.2, speedUnit: .mph)
+
+// Una corrida: lo medido, la boleta y el error de cada marca
+let comparison = run.compare(with: slip)
+
+// Muchas corridas: estadísticas por marca
+let report = ValidationReport([("Corrida 1", run.analyze(), slip), ("Corrida 2", other.analyze(), slip2)])
+for s in report.summaries {
+    print(s.mark, s.bias, s.rms, s.worst, s.passed)
+}
+report.passed      // todas las marcas dentro de su meta
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val slip = Timeslip(sixtyFeet = 2.12, quarterMile = 12.91, quarterMileSpeed = 114.2, speedUnit = SpeedUnit.mph)
+
+// Una corrida: lo medido, la boleta y el error de cada marca
+val comparison = run.compare(slip)
+
+// Muchas corridas: estadísticas por marca
+val report = ValidationReport.of(listOf(
+    ValidationInput("Corrida 1", run.analyze(), slip),
+    ValidationInput("Corrida 2", other.analyze(), slip2),
+))
+report.summaries.forEach { println("${it.mark} ${it.bias} ${it.rms} ${it.worst} ${it.passed}") }
+report.passed      // todas las marcas dentro de su meta
+```
+
+</TabItem>
+</Tabs>
+
+| Por marca | Qué significa |
+| --- | --- |
+| `bias` | El error promedio, con signo: si TorkeKit lee siempre un poco lento o rápido. |
+| `meanAbsolute` | El error promedio sin signo. |
+| `rms` | El error típico. Es el que se compara con la meta. |
+| `worst` | El peor error, con signo. |
+| `passed` | `rms` dentro de la meta. |
+
+El error es **TorkeKit menos la boleta**: en tiempos, positivo quiere decir que TorkeKit leyó más lento; en velocidades, más rápido.
+
+## Desde la terminal
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+En una Mac con Xcode, desde la carpeta de `torke-kit-ios`:
+
+```bash
+swift run torke-validate mis-corridas.json --runs
+swift run torke-validate corrida.torkerun.json --60ft 2.12 --1/4 12.91 --1/4-speed 114.2 --mph
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+En cualquier compu con Java 17, desde la carpeta de `torke-kit-android`:
+
+```bash
+./gradlew :torke-validate:installDist
+torke-validate/build/install/torke-validate/bin/torke-validate mis-corridas.json --runs
+```
+
+</TabItem>
+</Tabs>
+
+```text title="Salida"
+TorkeKit validation · 1 run
+
+Mark        Runs      Bias  Mean |e|       RMS     Worst    Target
+60 ft          1    -0.006     0.006     0.006    -0.006    ±0.100  ok
+330 ft         1    +0.027     0.027     0.027    +0.027    ±0.120  ok
+1/8 mile       1    +0.039     0.039     0.039    +0.039    ±0.120  ok
+1/8 speed      1     +0.06      0.06      0.06     +0.06     ±3.00  ok
+1000 ft        1    +0.027     0.027     0.027    +0.027    ±0.150  ok
+1/4 mile       1    +0.022     0.022     0.022    +0.022    ±0.150  ok
+1/4 speed      1     +0.27      0.27      0.27     +0.27     ±3.00  ok
+
+PASS: every mark is within its target.
+```
+
+| Opción | Qué hace |
+| --- | --- |
+| `--60ft`, `--330ft`, `--1/8`, `--1000ft`, `--1/4` | Tiempos de la boleta, para una sola corrida. |
+| `--1/8-speed`, `--1/4-speed` | Velocidades de la boleta; en km/h, o en mph con `--mph`. |
+| `--runs` | Muestra cada corrida, marca por marca. |
+| `--json` | El reporte en JSON, para scripts. |
+| `--stored` | Usa el resultado guardado en vez de analizar de nuevo. |
+
+Sale con **0** si todas las marcas cumplen, **1** si no y **2** si falta algo. Sirve para correrlo en la integración continua: si un cambio al motor empeora los tiempos, la prueba falla.
+
+## El archivo de validación
+
+```json title="mis-corridas.json"
+{
+  "format": "torke.validation",
+  "version": 1,
+  "runs": [
+    { "run": "corridas/primera.torkerun.json", "label": "Corrida 1",
+      "timeslip": { "sixtyFeet": 2.12, "eighthMile": 8.55, "eighthMileSpeed": 89.9,
+                    "quarterMile": 12.91, "quarterMileSpeed": 114.2, "speedUnit": "mph" } }
+  ]
+}
+```
+
+| Campo | Qué es |
+| --- | --- |
+| `runs[].run` | La grabación, relativa al archivo de validación. |
+| `timeslip` | Lo que tenga la boleta: `sixtyFeet`, `threeThirtyFeet`, `eighthMile`, `eighthMileSpeed`, `thousandFeet`, `quarterMile`, `quarterMileSpeed`. |
+| `speedUnit` | `"kmh"` (por defecto) o `"mph"`. |
+| `reactionTime`, `notes` | Para tus notas: no se comparan. |
+| `targets` | Opcional: tus propias metas por marca. |
+
+Las metas por defecto son las de TorkeKit: 60 pies ±0,10 s, 330 pies y 1/8 ±0,12 s, 1000 pies y 1/4 ±0,15 s, velocidades ±3 km/h.
+
+<Aside type="tip" title="Mandanos tus boletas">
+Cada set de corridas con boleta nos ayuda a validar el motor con datos reales. Si querés compartir el tuyo, abrí un issue en el [repositorio](https://github.com/elmaedesistemas/torke-kit-ios/issues).
+</Aside>
