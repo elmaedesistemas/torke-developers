@@ -1,0 +1,131 @@
+---
+title: Instalação
+description: Adicione o TorkeKit com Swift Package Manager no iOS ou com Gradle e JitPack no Android, e peça as permissões de localização e movimento.
+---
+
+import { Steps, TabItem, Tabs, Aside } from '@astrojs/starlight/components';
+
+A versão atual é a **0.2.0**. As tags não levam `v`: `0.1.0`, `0.2.0`…
+
+## Adicione o pacote
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+No Xcode: **File → Add Package Dependencies…** e cole o endereço do repositório. Ou no seu `Package.swift`:
+
+```swift title="Package.swift"
+dependencies: [
+    .package(url: "https://github.com/elmaedesistemas/torke-kit-ios", from: "0.2.0")
+],
+targets: [
+    .target(name: "MeuApp", dependencies: [
+        .product(name: "TorkeKit", package: "torke-kit-ios"),
+        .product(name: "TorkeKitSensors", package: "torke-kit-ios"),
+    ])
+]
+```
+
+| Produto | O que traz | Depende de |
+| --- | --- | --- |
+| `TorkeKit` | O motor, `RunSession`, o formato `torke.run`, `RecordedRunProvider`, `DemoRun` | Só Foundation (iOS 17, macOS 14) |
+| `TorkeKitSensors` | `PhoneSensorProvider` (CoreMotion + CoreLocation) | iOS |
+
+</TabItem>
+<TabItem label="Kotlin">
+
+O TorkeKit é publicado no JitPack. Adicione o repositório e a dependência:
+
+```kotlin title="settings.gradle.kts"
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven("https://jitpack.io")
+    }
+}
+```
+
+```kotlin title="app/build.gradle.kts"
+dependencies {
+    implementation("com.github.elmaedesistemas.torke-kit-android:torke-kit-sensors:0.2.0")
+    // Só o núcleo, sem Android (um servidor, testes):
+    // implementation("com.github.elmaedesistemas.torke-kit-android:torke-kit:0.2.0")
+}
+```
+
+| Módulo | O que traz | Depende de |
+| --- | --- | --- |
+| `torke-kit` | O motor, `RunSession`, o formato `torke.run`, `RecordedRunProvider`, `DemoRun` | Kotlin (JVM), coroutines, kotlinx.serialization |
+| `torke-kit-sensors` | `PhoneSensorProvider` (SensorManager + LocationManager) | Android, `minSdk 26` |
+
+</TabItem>
+</Tabs>
+
+## Peça as permissões
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+<Steps>
+
+1. **Explique para que você usa os sensores** no `Info.plist`:
+
+   ```xml title="Info.plist"
+   <key>NSLocationWhenInUseUsageDescription</key>
+   <string>Usamos o GPS para medir a velocidade e a distância das suas arrancadas.</string>
+   <key>NSMotionUsageDescription</key>
+   <string>Usamos o acelerômetro para detectar a largada e medir os 60 pés.</string>
+   ```
+
+2. **Peça a permissão antes de armar a arrancada:**
+
+   ```swift
+   let phone = PhoneSensorProvider()
+   await phone.requestPermission()
+   ```
+
+3. **Mantenha a tela ligada** enquanto grava:
+
+   ```swift
+   UIApplication.shared.isIdleTimerDisabled = true
+   ```
+
+</Steps>
+
+</TabItem>
+<TabItem label="Kotlin">
+
+<Steps>
+
+1. **Declare a permissão** no `AndroidManifest.xml`:
+
+   ```xml title="AndroidManifest.xml"
+   <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+   ```
+
+2. **Peça a localização precisa antes de criar o provedor:**
+
+   ```kotlin
+   val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+       if (granted) phone = PhoneSensorProvider(context)
+   }
+   ask.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+   ```
+
+3. **Mantenha a tela ligada** enquanto grava:
+
+   ```kotlin
+   window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+   ```
+
+   Para gravar com a tela desligada, colete os dados dentro de um *foreground service* do tipo `location`.
+
+</Steps>
+
+</TabItem>
+</Tabs>
+
+<Aside type="tip" title="Sem carro por perto?">
+Você não precisa de permissões para testar: a [arrancada simulada](/pt/empezar/primera-corrida/) roda no simulador, no emulador e nos testes unitários.
+</Aside>

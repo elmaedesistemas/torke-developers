@@ -1,0 +1,57 @@
+---
+title: O que é o TorkeKit
+description: Um SDK aberto que transforma o celular em um cronômetro de arrancada. O que mede, onde roda e o que não faz.
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+O **TorkeKit** transforma o celular em um cronômetro de arrancada. Ele lê o acelerômetro e o GPS enquanto o carro larga e entrega os mesmos tempos que a pista imprime no ticket: 60 pés, 1/8 e 1/4 de milha com a velocidade, e 0 a 100 km/h.
+
+É o motor do app [Torke](https://torke.today) na Costa Rica, aberto sob a licença Apache 2.0 para quem quiser construir apps de cronometragem, ferramentas para pistas ou produtos automotivos.
+
+## O que mede
+
+| O quê | Exemplos |
+| --- | --- |
+| **Largada parada** | 60 pés, 1/8 e 1/4 de milha com velocidade final, 0 a 100 km/h, 0 a 60 mph, 1000 pés, meia milha, qualquer faixa de velocidade (100 a 200 km/h). |
+| **Trechos em movimento** | Retomada (60 a 130 km/h) e frenagem (100 a 0 km/h). |
+| **Forças** | g na largada e g máximo. |
+| **Ar** | Altitude de densidade e correção dos tempos para o ar padrão (SAE J1349). |
+| **Potência** | Cavalos estimados pela velocidade final e curva de potência nas rodas. |
+| **Confiança** | Uma nota por arrancada (boa, regular, ruim) com os motivos: GPS lento, inclinação, suporte frouxo… |
+| **Suspensão** | Centro instantâneo, anti-squat e ângulos de 4-link, ladder bar e torque arm. |
+
+## Onde roda
+
+<CardGrid>
+	<Card title="iOS" icon="apple">
+		Swift, iOS 17 ou superior. O núcleo (`TorkeKit`) também roda no macOS 14; os sensores ficam em `TorkeKitSensors`.
+	</Card>
+	<Card title="Android" icon="mobile-android">
+		Kotlin, `minSdk 26`. O núcleo (`torke-kit`) não tem código Android: roda em qualquer JVM, inclusive em um
+		servidor.
+	</Card>
+</CardGrid>
+
+As duas versões têm **a mesma API e dão os mesmos números**. Uma arrancada gravada em um iPhone é analisada igual no Android ou no seu servidor: os testes das duas leem os mesmos arquivos de referência e precisam bater.
+
+## As três peças
+
+Toda integração usa as mesmas três coisas:
+
+1. **Uma fonte de dados** (`RunDataProvider`): os sensores do celular (`PhoneSensorProvider`), uma arrancada gravada (`RecordedRunProvider`) ou a arrancada simulada (`RecordedRunProvider.demo()`).
+2. **Uma sessão** (`RunSession`): decide quando o carro está parado, quando largou e quando terminou.
+3. **Eventos e snapshot**: os eventos avisam o que acontece uma vez (armado, largada, resultado); o snapshot é o estado ao vivo para a tela.
+
+## O que não faz
+
+- **Não decide se uma arrancada é legal.** Ele informa onde ela começou (`startLocation`); o seu servidor decide se foi em uma pista ou em um evento autorizado.
+- **Não traz ranking nem antifraude.** Isso fica no servidor de cada produto.
+- **Não traz valores de suspensão de ninguém.** As janelas-alvo são definidas por você.
+
+## Continue por aqui
+
+<CardGrid>
+	<LinkCard title="Instalação" description="Adicione o pacote ao seu app." href="/pt/empezar/instalacion/" />
+	<LinkCard title="Sua primeira arrancada" description="Meça a arrancada simulada em dez linhas." href="/pt/empezar/primera-corrida/" />
+</CardGrid>

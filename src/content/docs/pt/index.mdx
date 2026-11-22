@@ -1,0 +1,127 @@
+---
+title: Torke for Developers
+description: TorkeKit, o SDK aberto para cronometrar arrancadas com o celular. 60 pés, 1/8, 1/4, 0 a 100, clima, potência e suspensão, no iOS e no Android.
+template: splash
+hero:
+  title: Cronometre arrancadas <span class="tk-go">no seu código</span>
+  tagline: |
+    O TorkeKit tira 60 pés, 1/8, 1/4 de milha e 0 a 100 km/h do acelerômetro e do GPS do celular, não importa como ele esteja no suporte. Aberto, gratuito e com a mesma API no iOS e no Android.
+    <span class="tk-platforms"><span class="tk-platform is-live">iOS · Swift</span><span class="tk-platform is-live">Android · Kotlin</span><span class="tk-platform is-live">Servidor · JVM</span></span>
+  image:
+    html: |
+      <div class="tk-stage" role="img" aria-label="Demonstração: a árvore passa de amarelo para verde e o ticket da arrancada demo do TorkeKit é impresso, 12,826 segundos no quarto de milha">
+        <div class="tk-tree" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <div class="tk-slip" aria-hidden="true">
+          <header><b>TORKEKIT</b><span>DemoRun · seed 42</span></header>
+          <div class="tk-row" style="--at:.16"><span>60 FT</span><b>2.100</b><em></em></div>
+          <div class="tk-row" style="--at:.41"><span>0–100</span><b>5.292</b><em></em></div>
+          <div class="tk-row" style="--at:.66"><span>1/8</span><b>8.486</b><em>145.8</em></div>
+          <div class="tk-row" style="--at:.97"><span>1/4</span><b>12.826</b><em>184.3</em></div>
+          <div class="tk-et"><span>E.T.</span><strong>12.826</strong></div>
+          <footer>km/h · os mesmos números no iOS e no Android</footer>
+        </div>
+      </div>
+  actions:
+    - text: Começar
+      link: /pt/empezar/instalacion/
+      icon: right-arrow
+    - text: Teste o laboratório
+      link: /pt/guias/suspension/#laboratório
+      icon: setting
+      variant: secondary
+    - text: Ver no GitHub
+      link: https://github.com/elmaedesistemas/torke-kit-ios
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard, TabItem, Tabs } from '@astrojs/starlight/components';
+
+## Como fica no código
+
+Uma sessão, um `arm()` e eventos. O cronômetro começa sozinho quando o carro larga.
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+import TorkeKit
+import TorkeKitSensors
+
+let session = RunSession()
+session.start(with: PhoneSensorProvider())
+session.arm()
+
+for await event in session.events() {
+    if case .finished(let result) = event {
+        print("1/4 de milha: \(result.quarterMile!) s a \(result.quarterMileKmh!) km/h")
+    }
+}
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+import today.torke.kit.session.*
+import today.torke.kit.sensors.PhoneSensorProvider
+
+val session = RunSession()
+session.start(PhoneSensorProvider(context), lifecycleScope)
+session.arm()
+
+session.events.collect { event ->
+    if (event is RunEvent.Finished) {
+        println("1/4 de milha: ${event.result.quarterMile} s a ${event.result.quarterMileKmh} km/h")
+    }
+}
+```
+
+</TabItem>
+</Tabs>
+
+## O que resolve
+
+<CardGrid>
+	<Card title="Tempos de pista" icon="rocket">
+		60 pés, 1/8 e 1/4 de milha com velocidade final, 0 a 100 km/h, 0 a 60 mph, 1000 pés e meia milha. Desconta o pé
+		de rollout, como o cronômetro da pista.
+	</Card>
+	<Card title="Largada automática" icon="approve-check">
+		Detecta quando o carro está parado, arma a arrancada e começa a medir no instante da largada. Sem botões com o
+		carro na linha.
+	</Card>
+	<Card title="Clima, potência e qualidade" icon="star">
+		Correção SAE J1349, altitude de densidade, cavalos estimados e uma nota por arrancada: boa, regular ou ruim, com
+		o motivo.
+	</Card>
+	<Card title="Geometria de suspensão" icon="puzzle">
+		4-link, ladder bar e torque arm: centro instantâneo, anti-squat e quais furos testar. Fórmulas de livro, sem
+		valores de ninguém.
+	</Card>
+</CardGrid>
+
+## Para quem é
+
+<CardGrid>
+	<Card title="Apps de cronometragem" icon="laptop">
+		Um motor testado em vez de escrever o filtro de Kalman do zero.
+	</Card>
+	<Card title="Pistas e organizadores" icon="server">
+		Leia as arrancadas gravadas (`torke.run`) no seu servidor e confira onde foram feitas.
+	</Card>
+	<Card title="Oficinas e produtos automotivos" icon="seti:config">
+		Mostre o efeito de uma mudança de suspensão ao lado do tempo de 60 pés.
+	</Card>
+</CardGrid>
+
+## Por onde seguir
+
+<CardGrid>
+	<LinkCard title="Instalação" description="Swift Package Manager ou Gradle com JitPack, em dois minutos." href="/pt/empezar/instalacion/" />
+	<LinkCard title="Sua primeira arrancada" description="Meça uma arrancada simulada sem sair do computador." href="/pt/empezar/primera-corrida/" />
+	<LinkCard title="A sessão ao vivo" description="Fases, eventos e snapshot, passo a passo." href="/pt/guias/sesion/" />
+	<LinkCard title="Laboratório de suspensão" description="Mexa as barras do 4-link e veja o centro instantâneo." href="/pt/guias/suspension/#laboratório" />
+</CardGrid>
+
+<p class="tk-legal"><b>Só na pista ou em eventos autorizados.</b> O TorkeKit informa onde cada arrancada começou para o seu servidor decidir se ela vale. Rua não é pista.</p>

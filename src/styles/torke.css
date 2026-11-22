@@ -205,6 +205,8 @@ h1#_top {
 	border-radius: 999px;
 	padding: 0.3rem 0.8rem;
 }
+:lang(en) .hero .copy::before { content: 'TorkeKit · Open-source timing SDK'; }
+:lang(pt-BR) .hero .copy::before { content: 'TorkeKit · SDK aberto de cronometragem'; }
 .hero .copy { align-items: center; }
 @media (min-width: 50rem) {
 	.hero .copy { align-items: flex-start; }
@@ -385,7 +387,9 @@ h1#_top {
 	.hero > .hero-html { order: 2; width: min(92%, 22rem); margin-top: 1rem; }
 	.tk-stage { grid-template-columns: 3.2rem 1fr; gap: 0.9rem; }
 	.tk-tree i { width: 2.1rem; }
-	.hero .copy::before { content: 'TorkeKit SDK'; }
+	.hero .copy::before,
+	:lang(en) .hero .copy::before,
+	:lang(pt-BR) .hero .copy::before { content: 'TorkeKit SDK'; }
 	.tk-slip header span { display: none; }
 }
 

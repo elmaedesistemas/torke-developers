@@ -1,0 +1,188 @@
+---
+title: Sua primeira arrancada
+description: Meça a arrancada simulada do TorkeKit em dez linhas, sem carro nem permissões, e depois passe para os sensores do celular.
+---
+
+import { Steps, TabItem, Tabs, Aside } from '@astrojs/starlight/components';
+
+Vamos medir uma arrancada sem sair do computador. O TorkeKit traz um **carro de rua simulado**: dois segundos parado, depois passa do quarto de milha, com o celular inclinado, ruído nos sensores e um GPS de 1 Hz, como um de verdade.
+
+<Steps>
+
+1. **Crie a sessão e arme**
+
+   `arm()` começa a gravar. Em uma largada parada, o cronômetro começa sozinho quando o carro larga.
+
+   <Tabs syncKey="platform">
+   <TabItem label="Swift">
+
+   ```swift
+   import TorkeKit
+
+   let session = RunSession()
+   session.arm()
+   ```
+
+   </TabItem>
+   <TabItem label="Kotlin">
+
+   ```kotlin
+   import today.torke.kit.session.RunSession
+   import today.torke.kit.input.RecordedRunProvider
+
+   val session = RunSession()
+   session.arm()
+   ```
+
+   </TabItem>
+   </Tabs>
+
+2. **Passe a arrancada simulada**
+
+   `run` lê a fonte até o fim e fecha a arrancada. Com a arrancada simulada leva milissegundos.
+
+   <Tabs syncKey="platform">
+   <TabItem label="Swift">
+
+   ```swift
+   await session.run(with: RecordedRunProvider.demo())
+   ```
+
+   </TabItem>
+   <TabItem label="Kotlin">
+
+   ```kotlin
+   session.run(RecordedRunProvider.demo())   // dentro de uma corrotina
+   ```
+
+   </TabItem>
+   </Tabs>
+
+3. **Leia os tempos**
+
+   <Tabs syncKey="platform">
+   <TabItem label="Swift">
+
+   ```swift
+   if let r = session.snapshot.result {
+       print("60 ft:  \(r.sixtyFeet!) s")
+       print("0–100:  \(r.zeroTo100!) s")
+       print("1/8:    \(r.eighthMile!) s a \(r.eighthMileKmh!) km/h")
+       print("1/4:    \(r.quarterMile!) s a \(r.quarterMileKmh!) km/h")
+   }
+   ```
+
+   </TabItem>
+   <TabItem label="Kotlin">
+
+   ```kotlin
+   session.snapshot.value.result?.let { r ->
+       println("60 ft:  ${r.sixtyFeet} s")
+       println("0–100:  ${r.zeroTo100} s")
+       println("1/8:    ${r.eighthMile} s a ${r.eighthMileKmh} km/h")
+       println("1/4:    ${r.quarterMile} s a ${r.quarterMileKmh} km/h")
+   }
+   ```
+
+   </TabItem>
+   </Tabs>
+
+</Steps>
+
+Você deve ver isto, igual no iOS e no Android:
+
+```text
+60 ft:  2.100 s
+0–100:  5.292 s
+1/8:    8.486 s a 145.8 km/h
+1/4:    12.826 s a 184.3 km/h
+```
+
+<Aside type="note" title="Sempre a mesma arrancada">
+`demo()` usa a semente 42. A mesma semente dá exatamente a mesma arrancada nas duas plataformas, então serve para testes automáticos: se o número mudar, o motor mudou. Teste `demo(seed: 7)` para outra arrancada.
+</Aside>
+
+## Agora com o celular
+
+Troque a fonte pelos sensores e escute os eventos. A sessão faz o resto: espera o carro ficar parado, arma, detecta a largada e termina sozinha.
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift title="RunView.swift"
+import SwiftUI
+import TorkeKit
+import TorkeKitSensors
+
+struct RunView: View {
+    @State private var session = RunSession()
+    @State private var message = "Coloque o carro na linha"
+    private let phone = PhoneSensorProvider()
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Text("\(Int(session.snapshot.speedKmh)) km/h")
+                .font(.system(size: 64, weight: .black, design: .monospaced))
+            Text(String(format: "%.2f s", session.snapshot.elapsed))
+            Text(message).foregroundStyle(.secondary)
+            Button("Armar") { session.arm() }
+        }
+        .task {
+            await phone.requestPermission()
+            session.start(with: phone)          // prévia do GPS
+            for await event in session.events() {
+                switch event {
+                case .armed: message = "Pronto. Largue quando quiser."
+                case .disarmed: message = "Mexeu: fique parado."
+                case .finished(let r): message = "1/4: \(r.quarterMile ?? 0) s"
+                case .failed(let f): message = "Sem arrancada: \(f)"
+                default: break
+                }
+            }
+        }
+        .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
+        .onDisappear { session.stop() }
+    }
+}
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin title="RunScreen.kt"
+@Composable
+fun RunScreen(phone: PhoneSensorProvider) {
+    val scope = rememberCoroutineScope()
+    val session = remember { RunSession() }
+    val snapshot by session.snapshot.collectAsState()
+    var message by remember { mutableStateOf("Coloque o carro na linha") }
+
+    LaunchedEffect(Unit) {
+        session.start(phone, scope)                // prévia do GPS
+        session.events.collect { event ->
+            message = when (event) {
+                RunEvent.Armed -> "Pronto. Largue quando quiser."
+                RunEvent.Disarmed -> "Mexeu: fique parado."
+                is RunEvent.Finished -> "1/4: ${event.result.quarterMile} s"
+                is RunEvent.Failed -> "Sem arrancada: ${event.failure}"
+                else -> message
+            }
+        }
+    }
+    DisposableEffect(Unit) { onDispose { session.stop() } }
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("${snapshot.speedKmh.toInt()} km/h", fontSize = 64.sp, fontFamily = FontFamily.Monospace)
+        Text("%.2f s".format(snapshot.elapsed))
+        Text(message)
+        Button(onClick = { session.arm() }) { Text("Armar") }
+    }
+}
+```
+
+</TabItem>
+</Tabs>
+
+<Aside type="caution" title="O suporte importa">
+O celular precisa estar **fixo** (um suporte rígido no para-brisa ou no console), não na mão nem solto no banco. A orientação não importa: o TorkeKit aprende para onde é "frente" na largada.
+</Aside>

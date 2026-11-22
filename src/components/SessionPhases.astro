@@ -1,47 +1,92 @@
 ---
-// Las fases de RunSession: tocá una para ver qué significa, qué evento la trae y qué hacer en pantalla.
+// Las fases de RunSession, en el idioma de la página: tocá una para ver qué significa, qué evento la trae y qué hacer en pantalla.
 // Con "Reproducir" recorre una corrida completa.
-const phases = [
-	{
-		id: 'idle', swift: '.idle', kotlin: 'Idle', step: 'start()',
-		text: 'No graba. Si ya llamaste <code>start</code>, el GPS igual refresca <code>speed</code> y <code>location</code>: es la vista previa antes de la línea.',
-		ui: 'Mostrá la velocidad del GPS y el botón para armar.', ev: '',
-	},
-	{
-		id: 'waiting', swift: '.waitingStill', kotlin: 'WaitingStill', step: 'arm()',
-		text: 'Graba y espera que el carro esté <b>un segundo quieto</b> (aceleración bajo 0,6 m/s² y GPS bajo 1,5 m/s).',
-		ui: '«Quedate quieto en la línea».', ev: '',
-	},
-	{
-		id: 'armed', swift: '.armed', kotlin: 'Armed', step: 'quieto',
-		text: 'Listo para salir. El cronómetro arranca solo con una aceleración sostenida. Si se mueve sin arrancar, vuelve a esperar y llega <code>disarmed</code>.',
-		ui: 'Arbolito en verde: «Salí cuando quieras».', ev: 'armed',
-	},
-	{
-		id: 'running', swift: '.running(start:)', kotlin: 'Running(start)', step: 'arranque',
-		text: 'Midiendo. <code>elapsed</code> y <code>distance</code> corren en vivo, y cada marca llega como <code>passed</code> (estimación del GPS).',
-		ui: 'Cronómetro grande y las marcas a medida que pasan.', ev: 'launched → passed (60 ft) → passed (1/8) → …',
-	},
-	{
-		id: 'finished', swift: '.finished', kotlin: 'Finished', step: 'fin',
-		text: 'Terminó sola: pasó el cuarto de milla, el piloto levantó el pie o pasaron 40 s. <code>result</code> trae los tiempos oficiales, calculados con todas las muestras.',
-		ui: 'La boleta. Guardá la corrida con <code>recording()</code>.', ev: 'finished(result)',
-	},
-	{
-		id: 'failed', swift: '.failed(_)', kotlin: 'Failed(failure)', step: 'error',
-		text: 'No hubo corrida: <code>noLaunch</code> (terminó sin arrancar), <code>noInterval</code>, <code>noMotionSensors</code> o <code>locationDenied</code>.',
-		ui: 'Explicá el motivo y ofrecé armar de nuevo.', ev: 'failed(failure)',
-	},
+import { langOf } from './i18n';
+
+const lang = langOf(Astro.url);
+const names = [
+	{ swift: '.idle', kotlin: 'Idle', ev: '' },
+	{ swift: '.waitingStill', kotlin: 'WaitingStill', ev: '' },
+	{ swift: '.armed', kotlin: 'Armed', ev: 'armed' },
+	{ swift: '.running(start:)', kotlin: 'Running(start)', ev: 'launched → passed (60 ft) → passed (1/8) → …' },
+	{ swift: '.finished', kotlin: 'Finished', ev: 'finished(result)' },
+	{ swift: '.failed(_)', kotlin: 'Failed(failure)', ev: 'failed(failure)' },
 ];
+const copy = {
+	es: {
+		title: 'Fases de RunSession', hint: 'Tocá una fase', play: '▶ Reproducir', playing: '■ Reproduciendo', group: 'Fases',
+		screen: 'En pantalla:', event: 'evento:',
+		steps: ['start()', 'arm()', 'quieto', 'arranque', 'fin', 'error'],
+		text: [
+			'No graba. Si ya llamaste <code>start</code>, el GPS igual refresca <code>speed</code> y <code>location</code>: es la vista previa antes de la línea.',
+			'Graba y espera que el carro esté <b>un segundo quieto</b> (aceleración bajo 0,6 m/s² y GPS bajo 1,5 m/s).',
+			'Listo para salir. El cronómetro arranca solo con una aceleración sostenida. Si se mueve sin arrancar, vuelve a esperar y llega <code>disarmed</code>.',
+			'Midiendo. <code>elapsed</code> y <code>distance</code> corren en vivo, y cada marca llega como <code>passed</code> (estimación del GPS).',
+			'Terminó sola: pasó el cuarto de milla, el piloto levantó el pie o pasaron 40 s. <code>result</code> trae los tiempos oficiales, calculados con todas las muestras.',
+			'No hubo corrida: <code>noLaunch</code> (terminó sin arrancar), <code>noInterval</code>, <code>noMotionSensors</code> o <code>locationDenied</code>.',
+		],
+		ui: [
+			'Mostrá la velocidad del GPS y el botón para armar.',
+			'«Quedate quieto en la línea».',
+			'Arbolito en verde: «Salí cuando quieras».',
+			'Cronómetro grande y las marcas a medida que pasan.',
+			'La boleta. Guardá la corrida con <code>recording()</code>.',
+			'Explicá el motivo y ofrecé armar de nuevo.',
+		],
+	},
+	en: {
+		title: 'RunSession phases', hint: 'Tap a phase', play: '▶ Play', playing: '■ Playing', group: 'Phases',
+		screen: 'On screen:', event: 'event:',
+		steps: ['start()', 'arm()', 'still', 'launch', 'done', 'error'],
+		text: [
+			'Not recording. If you already called <code>start</code>, the GPS still refreshes <code>speed</code> and <code>location</code>: a preview before the line.',
+			'Recording, waiting for the car to stand <b>still for one second</b> (acceleration under 0.6 m/s² and GPS under 1.5 m/s).',
+			'Ready to launch. The timer starts by itself on sustained acceleration. If the car moves without launching, it waits again and <code>disarmed</code> arrives.',
+			'Measuring. <code>elapsed</code> and <code>distance</code> run live, and each mark arrives as <code>passed</code> (a GPS estimate).',
+			'Finished by itself: past the quarter mile, the driver lifted, or 40 s went by. <code>result</code> has the official times, computed from every sample.',
+			'No run: <code>noLaunch</code> (ended without a launch), <code>noInterval</code>, <code>noMotionSensors</code> or <code>locationDenied</code>.',
+		],
+		ui: [
+			'Show the GPS speed and the arm button.',
+			'“Hold still on the line.”',
+			'Green light: “Launch when you want.”',
+			'A big timer and the marks as they pass.',
+			'The timeslip. Save the run with <code>recording()</code>.',
+			'Explain why and offer to arm again.',
+		],
+	},
+	pt: {
+		title: 'Fases da RunSession', hint: 'Toque em uma fase', play: '▶ Reproduzir', playing: '■ Reproduzindo', group: 'Fases',
+		screen: 'Na tela:', event: 'evento:',
+		steps: ['start()', 'arm()', 'parado', 'largada', 'fim', 'erro'],
+		text: [
+			'Não grava. Se você já chamou <code>start</code>, o GPS continua atualizando <code>speed</code> e <code>location</code>: é a prévia antes da linha.',
+			'Grava e espera o carro ficar <b>um segundo parado</b> (aceleração abaixo de 0,6 m/s² e GPS abaixo de 1,5 m/s).',
+			'Pronto para largar. O cronômetro começa sozinho com uma aceleração sustentada. Se o carro se mexer sem largar, volta a esperar e chega <code>disarmed</code>.',
+			'Medindo. <code>elapsed</code> e <code>distance</code> correm ao vivo, e cada marca chega como <code>passed</code> (estimativa do GPS).',
+			'Terminou sozinha: passou do quarto de milha, o piloto tirou o pé ou passaram 40 s. <code>result</code> traz os tempos oficiais, calculados com todas as amostras.',
+			'Não houve arrancada: <code>noLaunch</code> (terminou sem largada), <code>noInterval</code>, <code>noMotionSensors</code> ou <code>locationDenied</code>.',
+		],
+		ui: [
+			'Mostre a velocidade do GPS e o botão para armar.',
+			'“Fique parado na linha.”',
+			'Luz verde: “Largue quando quiser.”',
+			'Cronômetro grande e as marcas conforme passam.',
+			'O comprovante. Salve a arrancada com <code>recording()</code>.',
+			'Explique o motivo e ofereça armar de novo.',
+		],
+	},
+}[lang];
+const phases = names.map((n, i) => ({ ...n, step: copy.steps[i], text: copy.text[i], ui: copy.ui[i] }));
 ---
 
-<div class="tk-lab tk-session not-content" data-session>
+<div class="tk-lab tk-session not-content" data-session data-play-label={copy.play} data-playing-label={copy.playing}>
 	<div class="tk-lab-head">
-		<b>Fases de RunSession</b>
-		<small>Tocá una fase</small>
-		<button type="button" data-play>▶ Reproducir</button>
+		<b>{copy.title}</b>
+		<small>{copy.hint}</small>
+		<button type="button" data-play>{copy.play}</button>
 	</div>
-	<div class="tk-phases" role="group" aria-label="Fases">
+	<div class="tk-phases" role="group" aria-label={copy.group}>
 		{phases.map((p, i) => (
 			<button type="button" class="tk-phase" data-i={i} aria-pressed={i === 0 ? 'true' : 'false'}>
 				<small>{p.step}</small>
@@ -53,8 +98,8 @@ const phases = [
 		{phases.map((p, i) => (
 			<div data-detail={i} hidden={i !== 0}>
 				<p set:html={p.text} />
-				<p><b>En pantalla:</b> <span set:html={p.ui} /></p>
-				{p.ev && <p class="tk-ev">evento: {p.ev}</p>}
+				<p><b>{copy.screen}</b> <span set:html={p.ui} /></p>
+				{p.ev && <p class="tk-ev">{copy.event} {p.ev}</p>}
 			</div>
 		))}
 	</div>
@@ -84,7 +129,7 @@ const phases = [
 		buttons.forEach((b, i) =>
 			b.addEventListener('click', () => {
 				clearInterval(timer);
-				play.textContent = '▶ Reproducir';
+				play.textContent = root.dataset.playLabel!;
 				show(i);
 			}),
 		);
@@ -92,13 +137,13 @@ const phases = [
 			clearInterval(timer);
 			let i = 0;
 			show(i);
-			play.textContent = '■ Reproduciendo';
+			play.textContent = root.dataset.playingLabel!;
 			// Idle → WaitingStill → Armed → Running → Finished (Failed queda fuera del recorrido feliz).
 			timer = window.setInterval(() => {
 				i += 1;
 				if (i > 4) {
 					clearInterval(timer);
-					play.textContent = '▶ Reproducir';
+					play.textContent = root.dataset.playLabel!;
 					return;
 				}
 				show(i);

@@ -1,0 +1,56 @@
+---
+title: What is TorkeKit
+description: An open-source SDK that turns the phone into a drag racing timer. What it measures, where it runs and what it doesn't do.
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+**TorkeKit** turns the phone into a drag racing timer. It reads the accelerometer and the GPS as the car launches and returns the same times the track prints on the timeslip: 60 ft, 1/8 and 1/4 mile with their speeds, and 0–100 km/h.
+
+It is the engine behind the [Torke](https://torke.today) app in Costa Rica, open under the Apache 2.0 license for anyone building timing apps, dragstrip tools or car products.
+
+## What it measures
+
+| What | Examples |
+| --- | --- |
+| **Standing start** | 60 ft, 1/8 and 1/4 mile with trap speed, 0–100 km/h, 0–60 mph, 1000 ft, half mile, any speed range (100–200 km/h). |
+| **Rolling intervals** | Rolling (60–130 km/h) and braking (100–0 km/h). |
+| **Forces** | Launch g and peak g. |
+| **Air** | Density altitude and times corrected to standard air (SAE J1349). |
+| **Power** | Horsepower estimated from the trap speed, and wheel power along the run. |
+| **Confidence** | A grade per run (good, fair, poor) with the reasons: slow GPS, slope, loose mount… |
+| **Suspension** | Instant center, anti-squat and bar angles for 4-link, ladder bar and torque arm. |
+
+## Where it runs
+
+<CardGrid>
+	<Card title="iOS" icon="apple">
+		Swift, iOS 17 or later. The core (`TorkeKit`) also runs on macOS 14; the sensors live in `TorkeKitSensors`.
+	</Card>
+	<Card title="Android" icon="mobile-android">
+		Kotlin, `minSdk 26`. The core (`torke-kit`) has no Android code: it runs on any JVM, a server included.
+	</Card>
+</CardGrid>
+
+Both versions have **the same API and give the same numbers**. A run recorded on an iPhone analyzes the same on Android or on your server: the tests on both platforms read the same reference files and must agree.
+
+## The three pieces
+
+Every integration uses the same three things:
+
+1. **A data source** (`RunDataProvider`): the phone's sensors (`PhoneSensorProvider`), a recorded run (`RecordedRunProvider`) or the simulated run (`RecordedRunProvider.demo()`).
+2. **A session** (`RunSession`): decides when the car is still, when it launched and when it finished.
+3. **Events and snapshot**: events tell you what happens once (armed, launch, result); the snapshot is the live state for the screen.
+
+## What it doesn't do
+
+- **It doesn't decide whether a run is legal.** It gives you where it launched (`startLocation`); your server decides whether that was a track or a sanctioned event.
+- **No leaderboard or anti-cheat.** Those live on each product's server.
+- **No one's suspension numbers.** You set the target windows.
+
+## Keep going
+
+<CardGrid>
+	<LinkCard title="Installation" description="Add the package to your app." href="/en/empezar/instalacion/" />
+	<LinkCard title="Your first run" description="Time the simulated run in ten lines." href="/en/empezar/primera-corrida/" />
+</CardGrid>

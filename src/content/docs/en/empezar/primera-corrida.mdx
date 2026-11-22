@@ -1,0 +1,188 @@
+---
+title: Your first run
+description: Time the TorkeKit simulated run in ten lines, with no car and no permissions, then move on to the phone's sensors.
+---
+
+import { Steps, TabItem, Tabs, Aside } from '@astrojs/starlight/components';
+
+Let's time a run without leaving your desk. TorkeKit ships a **simulated street car**: two seconds still, then past the quarter mile, with a tilted phone, sensor noise and a 1 Hz GPS, like a real one.
+
+<Steps>
+
+1. **Create the session and arm it**
+
+   `arm()` starts recording. In a standing start, the timer starts by itself when the car launches.
+
+   <Tabs syncKey="platform">
+   <TabItem label="Swift">
+
+   ```swift
+   import TorkeKit
+
+   let session = RunSession()
+   session.arm()
+   ```
+
+   </TabItem>
+   <TabItem label="Kotlin">
+
+   ```kotlin
+   import today.torke.kit.session.RunSession
+   import today.torke.kit.input.RecordedRunProvider
+
+   val session = RunSession()
+   session.arm()
+   ```
+
+   </TabItem>
+   </Tabs>
+
+2. **Feed it the simulated run**
+
+   `run` reads the source to the end and closes the run. With the simulated run it takes milliseconds.
+
+   <Tabs syncKey="platform">
+   <TabItem label="Swift">
+
+   ```swift
+   await session.run(with: RecordedRunProvider.demo())
+   ```
+
+   </TabItem>
+   <TabItem label="Kotlin">
+
+   ```kotlin
+   session.run(RecordedRunProvider.demo())   // inside a coroutine
+   ```
+
+   </TabItem>
+   </Tabs>
+
+3. **Read the times**
+
+   <Tabs syncKey="platform">
+   <TabItem label="Swift">
+
+   ```swift
+   if let r = session.snapshot.result {
+       print("60 ft:  \(r.sixtyFeet!) s")
+       print("0–100:  \(r.zeroTo100!) s")
+       print("1/8:    \(r.eighthMile!) s at \(r.eighthMileKmh!) km/h")
+       print("1/4:    \(r.quarterMile!) s at \(r.quarterMileKmh!) km/h")
+   }
+   ```
+
+   </TabItem>
+   <TabItem label="Kotlin">
+
+   ```kotlin
+   session.snapshot.value.result?.let { r ->
+       println("60 ft:  ${r.sixtyFeet} s")
+       println("0–100:  ${r.zeroTo100} s")
+       println("1/8:    ${r.eighthMile} s at ${r.eighthMileKmh} km/h")
+       println("1/4:    ${r.quarterMile} s at ${r.quarterMileKmh} km/h")
+   }
+   ```
+
+   </TabItem>
+   </Tabs>
+
+</Steps>
+
+You should see this, the same on iOS and Android:
+
+```text
+60 ft:  2.100 s
+0–100:  5.292 s
+1/8:    8.486 s at 145.8 km/h
+1/4:    12.826 s at 184.3 km/h
+```
+
+<Aside type="note" title="Always the same run">
+`demo()` uses seed 42. The same seed gives exactly the same run on both platforms, so it works for automated tests: if the number changes, the engine changed. Try `demo(seed: 7)` for another run.
+</Aside>
+
+## Now with the phone
+
+Swap the source for the sensors and listen to the events. The session does the rest: waits for the car to stand still, arms, detects the launch and finishes by itself.
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift title="RunView.swift"
+import SwiftUI
+import TorkeKit
+import TorkeKitSensors
+
+struct RunView: View {
+    @State private var session = RunSession()
+    @State private var message = "Pull up to the line"
+    private let phone = PhoneSensorProvider()
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Text("\(Int(session.snapshot.speedKmh)) km/h")
+                .font(.system(size: 64, weight: .black, design: .monospaced))
+            Text(String(format: "%.2f s", session.snapshot.elapsed))
+            Text(message).foregroundStyle(.secondary)
+            Button("Arm") { session.arm() }
+        }
+        .task {
+            await phone.requestPermission()
+            session.start(with: phone)          // GPS preview
+            for await event in session.events() {
+                switch event {
+                case .armed: message = "Ready. Launch when you want."
+                case .disarmed: message = "It moved: hold still."
+                case .finished(let r): message = "1/4: \(r.quarterMile ?? 0) s"
+                case .failed(let f): message = "No run: \(f)"
+                default: break
+                }
+            }
+        }
+        .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
+        .onDisappear { session.stop() }
+    }
+}
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin title="RunScreen.kt"
+@Composable
+fun RunScreen(phone: PhoneSensorProvider) {
+    val scope = rememberCoroutineScope()
+    val session = remember { RunSession() }
+    val snapshot by session.snapshot.collectAsState()
+    var message by remember { mutableStateOf("Pull up to the line") }
+
+    LaunchedEffect(Unit) {
+        session.start(phone, scope)                // GPS preview
+        session.events.collect { event ->
+            message = when (event) {
+                RunEvent.Armed -> "Ready. Launch when you want."
+                RunEvent.Disarmed -> "It moved: hold still."
+                is RunEvent.Finished -> "1/4: ${event.result.quarterMile} s"
+                is RunEvent.Failed -> "No run: ${event.failure}"
+                else -> message
+            }
+        }
+    }
+    DisposableEffect(Unit) { onDispose { session.stop() } }
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("${snapshot.speedKmh.toInt()} km/h", fontSize = 64.sp, fontFamily = FontFamily.Monospace)
+        Text("%.2f s".format(snapshot.elapsed))
+        Text(message)
+        Button(onClick = { session.arm() }) { Text("Arm") }
+    }
+}
+```
+
+</TabItem>
+</Tabs>
+
+<Aside type="caution" title="The mount matters">
+The phone must be **fixed** (a rigid mount on the windshield or the console), not in the hand or loose on the seat. The orientation doesn't matter: TorkeKit learns which way is "forward" at the launch.
+</Aside>

@@ -1,0 +1,127 @@
+---
+title: Torke for Developers
+description: TorkeKit, the open-source SDK for timing drag runs with a phone. 60 ft, 1/8, 1/4, 0–100, weather, power and suspension, on iOS and Android.
+template: splash
+hero:
+  title: Time drag runs <span class="tk-go">from your code</span>
+  tagline: |
+    TorkeKit gets 60 ft, 1/8 mile, 1/4 mile and 0–100 km/h from the phone's accelerometer and GPS, however it sits in its mount. Open source, free, and the same API on iOS and Android.
+    <span class="tk-platforms"><span class="tk-platform is-live">iOS · Swift</span><span class="tk-platform is-live">Android · Kotlin</span><span class="tk-platform is-live">Server · JVM</span></span>
+  image:
+    html: |
+      <div class="tk-stage" role="img" aria-label="Demo: the tree goes from amber to green and the timeslip of the TorkeKit demo run prints, 12.826 seconds in the quarter mile">
+        <div class="tk-tree" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <div class="tk-slip" aria-hidden="true">
+          <header><b>TORKEKIT</b><span>DemoRun · seed 42</span></header>
+          <div class="tk-row" style="--at:.16"><span>60 FT</span><b>2.100</b><em></em></div>
+          <div class="tk-row" style="--at:.41"><span>0–100</span><b>5.292</b><em></em></div>
+          <div class="tk-row" style="--at:.66"><span>1/8</span><b>8.486</b><em>145.8</em></div>
+          <div class="tk-row" style="--at:.97"><span>1/4</span><b>12.826</b><em>184.3</em></div>
+          <div class="tk-et"><span>E.T.</span><strong>12.826</strong></div>
+          <footer>km/h · same numbers on iOS and Android</footer>
+        </div>
+      </div>
+  actions:
+    - text: Get started
+      link: /en/empezar/instalacion/
+      icon: right-arrow
+    - text: Try the lab
+      link: /en/guias/suspension/#lab
+      icon: setting
+      variant: secondary
+    - text: View on GitHub
+      link: https://github.com/elmaedesistemas/torke-kit-ios
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard, TabItem, Tabs } from '@astrojs/starlight/components';
+
+## What it looks like
+
+A session, an `arm()` and events. The timer starts by itself when the car launches.
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+import TorkeKit
+import TorkeKitSensors
+
+let session = RunSession()
+session.start(with: PhoneSensorProvider())
+session.arm()
+
+for await event in session.events() {
+    if case .finished(let result) = event {
+        print("1/4 mile: \(result.quarterMile!) s at \(result.quarterMileKmh!) km/h")
+    }
+}
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+import today.torke.kit.session.*
+import today.torke.kit.sensors.PhoneSensorProvider
+
+val session = RunSession()
+session.start(PhoneSensorProvider(context), lifecycleScope)
+session.arm()
+
+session.events.collect { event ->
+    if (event is RunEvent.Finished) {
+        println("1/4 mile: ${event.result.quarterMile} s at ${event.result.quarterMileKmh} km/h")
+    }
+}
+```
+
+</TabItem>
+</Tabs>
+
+## What it does
+
+<CardGrid>
+	<Card title="Dragstrip times" icon="rocket">
+		60 ft, 1/8 and 1/4 mile with trap speed, 0–100 km/h, 0–60 mph, 1000 ft and half mile. It discounts the
+		one-foot rollout, like the track's timer.
+	</Card>
+	<Card title="Automatic start" icon="approve-check">
+		Detects when the car stands still, arms the run and starts timing the instant it launches. No buttons with the
+		car on the line.
+	</Card>
+	<Card title="Weather, power and quality" icon="star">
+		SAE J1349 correction, density altitude, estimated horsepower and a grade for every run: good, fair or poor, with
+		the reason.
+	</Card>
+	<Card title="Suspension geometry" icon="puzzle">
+		4-link, ladder bar and torque arm: instant center, anti-squat and which holes to try. Textbook formulas, nobody's
+		numbers.
+	</Card>
+</CardGrid>
+
+## Who it's for
+
+<CardGrid>
+	<Card title="Timing apps" icon="laptop">
+		A tested engine instead of writing the Kalman filter from scratch.
+	</Card>
+	<Card title="Tracks and organizers" icon="server">
+		Read recorded runs (`torke.run`) on your server and check where they were made.
+	</Card>
+	<Card title="Shops and car products" icon="seti:config">
+		Show the effect of a suspension change next to the 60-foot time.
+	</Card>
+</CardGrid>
+
+## Where to next
+
+<CardGrid>
+	<LinkCard title="Installation" description="Swift Package Manager, or Gradle with JitPack, in two minutes." href="/en/empezar/instalacion/" />
+	<LinkCard title="Your first run" description="Time a simulated run without leaving your desk." href="/en/empezar/primera-corrida/" />
+	<LinkCard title="The live session" description="Phases, events and snapshot, step by step." href="/en/guias/sesion/" />
+	<LinkCard title="Suspension lab" description="Move the 4-link bars and watch the instant center." href="/en/guias/suspension/#lab" />
+</CardGrid>
+
+<p class="tk-legal"><b>Only at the track or at sanctioned events.</b> TorkeKit reports where each run launched so your server can decide whether it counts. The street is not a dragstrip.</p>

@@ -1,0 +1,48 @@
+---
+title: How it works
+description: From the accelerometer and the GPS to a timeslip. Axis calibration, Kalman filter and run analysis, explained without formulas.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+A phone's GPS gives **one fix per second**, and a 60-foot run lasts two. With the GPS alone, times come out half a second off. The accelerometer measures **a hundred times per second**, but it drifts and doesn't know which way is "forward". TorkeKit combines both and keeps the best of each.
+
+<div class="tk-flow not-content">
+	<div><small>Input</small><b>Sensors</b><span>Accelerometer at 100 Hz and GPS at 1 Hz or more, on the same clock.</span></div>
+	<div><small>Step 1</small><b>AxisCalibration</b><span>Removes gravity and learns which way is forward.</span></div>
+	<div><small>Step 2</small><b>SpeedFilter</b><span>Kalman: integrates acceleration and corrects it with the GPS.</span></div>
+	<div><small>Step 3</small><b>RunAnalyzer</b><span>Finds the launch and reads the marks.</span></div>
+</div>
+
+## 1. Knowing which way is forward
+
+The phone can sit any way: upright, flat, tilted toward the driver. `AxisCalibration` uses the gravity vector to keep only the **horizontal** part of the acceleration. Then it waits for the first strong push (the launch) and takes that direction as "forward".
+
+That's why you don't need to ask the user to place the phone in a special way. Only that it stays fixed.
+
+## 2. Combining accelerometer and GPS
+
+`SpeedFilter` is a **two-state Kalman filter**: the speed and the accelerometer's bias (the small constant error every sensor has, which grows if the mount is tilted).
+
+- A hundred times per second, it **predicts** the speed by adding up the acceleration.
+- Every time a GPS fix arrives, it **corrects** the speed and learns the bias, weighing each source by how much it trusts it (the accuracy the GPS reports).
+
+The result is a speed curve as smooth as the accelerometer's and without drift, like the GPS's.
+
+## 3. Reading the run
+
+`RunAnalyzer` looks for the **launch**: one second still, then sustained acceleration. From there it builds the speed and distance curve over time (`trace`) and reads each mark:
+
+- **Distances** (60 ft, 1/8, 1/4): the moment the distance crosses the mark, minus the one-foot rollout.
+- **Speeds** (0–100): the moment the speed crosses the value.
+- **Trap speed**: the speed when passing the mark, like the track's radar.
+
+<Aside type="note" title="Why do the official times come at the end?">
+During the run, the session only has the data up to that instant. When it finishes, `RunAnalyzer` goes over everything again with the bias already learned, and the times improve. That's why the live `passed` marks are an estimate, and `finished` is the one that counts.
+</Aside>
+
+## In real life
+
+- **Rigid mount.** If the phone shakes or moves, the accelerometer measures the mount, not the car. `RunQuality` detects it (`looseMount`, `phoneMoved`).
+- **Open sky.** The GPS needs to see satellites. Under a roof or between buildings its accuracy drops (`inaccurateGPS`).
+- **A faster GPS helps.** A 10 Hz Bluetooth receiver improves the quarter mile; it's coming in [phase 3](/en/referencia/roadmap/).

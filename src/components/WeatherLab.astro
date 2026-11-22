@@ -1,37 +1,48 @@
 ---
 // Calculadora de clima: las mismas fórmulas que Weather en TorkeKit (Magnus, densidad del aire,
 // altitud de densidad y corrección SAE J1349), aplicadas a la corrida demo.
+import { langOf, numberLocale } from './i18n';
+
+const lang = langOf(Astro.url);
+const t = {
+	es: { title: 'Calculadora de clima', sub: 'La corrida demo (12,826 s) con el aire que elijas', sea: 'Nivel del mar', track: 'Pista en Costa Rica',
+		temp: 'Temperatura', hum: 'Humedad relativa', pres: 'Presión de la estación', da: 'Altitud de densidad', cf: 'Factor SAE J1349', et: '1/4 corregido', hp: 'Potencia que se pierde' },
+	en: { title: 'Weather calculator', sub: 'The demo run (12.826 s) in the air you pick', sea: 'Sea level', track: 'Track in Costa Rica',
+		temp: 'Temperature', hum: 'Relative humidity', pres: 'Station pressure', da: 'Density altitude', cf: 'SAE J1349 factor', et: 'Corrected 1/4', hp: 'Power lost' },
+	pt: { title: 'Calculadora de clima', sub: 'A arrancada demo (12,826 s) com o ar que você escolher', sea: 'Nível do mar', track: 'Pista na Costa Rica',
+		temp: 'Temperatura', hum: 'Umidade relativa', pres: 'Pressão da estação', da: 'Altitude de densidade', cf: 'Fator SAE J1349', et: '1/4 corrigido', hp: 'Potência perdida' },
+}[lang];
 ---
 
-<div class="tk-lab not-content" data-weather>
+<div class="tk-lab not-content" data-weather data-locale={numberLocale[lang]}>
 	<div class="tk-lab-head">
-		<b>Calculadora de clima</b>
-		<small>La corrida demo (12,826 s) con el aire que elijas</small>
-		<button type="button" data-preset="sea">Nivel del mar</button>
-		<button type="button" data-preset="cr" style="margin-inline-start:0">Pista en Costa Rica</button>
+		<b>{t.title}</b>
+		<small>{t.sub}</small>
+		<button type="button" data-preset="sea">{t.sea}</button>
+		<button type="button" data-preset="cr" style="margin-inline-start:0">{t.track}</button>
 	</div>
 	<div class="tk-sliders">
 		<div class="tk-slider">
-			<label for="tk-w-t">Temperatura</label>
+			<label for="tk-w-t">{t.temp}</label>
 			<input id="tk-w-t" type="range" min="0" max="45" step="1" value="31" data-k="t" />
 			<output data-o="t"></output>
 		</div>
 		<div class="tk-slider">
-			<label for="tk-w-h">Humedad relativa</label>
+			<label for="tk-w-h">{t.hum}</label>
 			<input id="tk-w-h" type="range" min="0" max="100" step="1" value="70" data-k="h" />
 			<output data-o="h"></output>
 		</div>
 		<div class="tk-slider">
-			<label for="tk-w-p">Presión de la estación</label>
+			<label for="tk-w-p">{t.pres}</label>
 			<input id="tk-w-p" type="range" min="780" max="1040" step="1" value="910" data-k="p" />
 			<output data-o="p"></output>
 		</div>
 	</div>
 	<div class="tk-readouts">
-		<div class="tk-readout" data-r="da"><small>Altitud de densidad</small><strong></strong></div>
-		<div class="tk-readout" data-r="cf"><small>Factor SAE J1349</small><strong></strong></div>
-		<div class="tk-readout is-good" data-r="et"><small>1/4 corregido</small><strong></strong></div>
-		<div class="tk-readout" data-r="hp"><small>Potencia que se pierde</small><strong></strong></div>
+		<div class="tk-readout" data-r="da"><small>{t.da}</small><strong></strong></div>
+		<div class="tk-readout" data-r="cf"><small>{t.cf}</small><strong></strong></div>
+		<div class="tk-readout is-good" data-r="et"><small>{t.et}</small><strong></strong></div>
+		<div class="tk-readout" data-r="hp"><small>{t.hp}</small><strong></strong></div>
 	</div>
 </div>
 
@@ -49,9 +60,9 @@
 	}
 
 	const presets: Record<string, [number, number, number]> = { sea: [25, 0, 990], cr: [31, 70, 910] };
-	const fmt = (n: number, d = 0) => n.toLocaleString('es-CR', { minimumFractionDigits: d, maximumFractionDigits: d });
-
+	
 	for (const root of document.querySelectorAll<HTMLElement>('[data-weather]')) {
+		const fmt = (n: number, d = 0) => n.toLocaleString(root.dataset.locale, { minimumFractionDigits: d, maximumFractionDigits: d });
 		const inputs = Object.fromEntries(
 			[...root.querySelectorAll<HTMLInputElement>('input[data-k]')].map((i) => [i.dataset.k!, i]),
 		);

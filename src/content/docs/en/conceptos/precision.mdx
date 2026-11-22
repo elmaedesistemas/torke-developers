@@ -1,0 +1,34 @@
+---
+title: Accuracy
+description: How close TorkeKit's times are to the real ones, how that's tested and what affects accuracy.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+TorkeKit's automated tests simulate runs with exact physics (so the real time is known) and feed them through the engine with the worst of a phone: **1 Hz GPS, sensor noise and a tilted mount**. Every release must meet these targets:
+
+| Mark | Target |
+| --- | --- |
+| 60 ft | ± 0.10 s |
+| 0–100 km/h | ± 0.20 s |
+| 1/4 mile | ± 0.15 s |
+
+On top of that, iOS and Android must give **the same result** from the same samples: the tests on both platforms read `demo-42.torkerun.json` and compare the times to half a millisecond.
+
+## What helps and what hurts
+
+| Helps | Hurts |
+| --- | --- |
+| Rigid mount | Phone in the hand or loose |
+| Open sky | Roofs, trees, buildings |
+| GPS at 5 Hz or faster | 1 Hz GPS with dropped fixes |
+| Flat strip | Slope (gravity leaks in as acceleration) |
+| One second still before launching | Rolling off the line |
+
+## What's missing
+
+The targets above are checked with simulated runs. **Validation against dragstrip timeslips** (real runs timed by TorkeKit and by the track's timer at once) is on the [roadmap](/en/referencia/roadmap/) as `torke-validate`.
+
+<Aside type="tip" title="Got timeslips?">
+If you time runs at the track with TorkeKit, keep the recording (`.torkerun.json`) together with a photo of the timeslip. That's exactly the data we need to validate the engine: open an issue in the [repository](https://github.com/elmaedesistemas/torke-kit-ios/issues).
+</Aside>

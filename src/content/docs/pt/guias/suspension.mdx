@@ -1,0 +1,177 @@
+---
+title: Suspensão
+description: Geometria lateral de 4-link, ladder bar e torque arm. Centro instantâneo, anti-squat, ângulos, quais furos testar e como comparar uma mudança com o tempo de 60 pés.
+---
+
+import { TabItem, Tabs, Aside } from '@astrojs/starlight/components';
+import SuspensionLab from '../../../../components/SuspensionLab.astro';
+
+Em um carro de tração traseira, a suspensão decide como o peso é transferido na largada, e isso aparece direto no **tempo de 60 pés**. O TorkeKit calcula a geometria lateral com as fórmulas de livro: onde fica o **centro instantâneo** (IC) e quanto **anti-squat** o carro tem.
+
+## Laboratório
+
+<SuspensionLab />
+
+As duas barras se prolongam até se cruzarem: esse ponto é o **centro instantâneo**. A linha amarela vai do contato do pneu traseiro, passando pelo IC, até o eixo dianteiro. Se chegar exatamente à altura do centro de gravidade (a linha tracejada), o anti-squat é 100 %.
+
+`antiSquat = (icHeight / icLength) / (cgHeight / wheelbase) × 100`
+
+## Meça o seu carro
+
+Todas as medidas são em uma vista lateral, com o carro no chão e o piloto dentro:
+
+- **`x`**: para a frente a partir do centro do eixo traseiro.
+- **`y`**: para cima a partir do chão.
+- Em **polegadas** ou **centímetros**, sem misturar (`LengthUnit`). `converted(to:)` muda tudo de uma vez.
+
+| Ponto | O que é |
+| --- | --- |
+| `upperRear`, `upperFront` | Fixação da barra superior no eixo e no chassi. |
+| `lowerRear`, `lowerFront` | Fixação da barra inferior no eixo e no chassi. |
+| `pivot` | Ladder bar: o ponto de pivô dianteiro (é o IC). |
+| `armFront` | Torque arm: a fixação dianteira do braço. |
+| `wheelbase`, `cgHeight` | Entre-eixos e altura do centro de gravidade. |
+
+## No código
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+let setup = SuspensionSetup.fourLink(
+    wheelbase: 106, cgHeight: 21,
+    upperRear: Point2(x: 4, y: 21), upperFront: Point2(x: 30, y: 18),
+    lowerRear: Point2(x: 2, y: 9), lowerFront: Point2(x: 30, y: 11)
+)
+
+let g = setup.geometry()
+g.icLength       // polegadas à frente do eixo
+g.icHeight       // polegadas acima do chão
+g.antiSquat      // %
+g.bars           // ângulo e comprimento de cada barra
+g.warnings       // .parallelLinks, .instantCenterBehindAxle…
+
+// As outras suspensões
+SuspensionSetup.ladderBar(wheelbase: 106, cgHeight: 21, pivot: Point2(x: 48, y: 10))
+SuspensionSetup.torqueArm(wheelbase: 106, cgHeight: 21, armFront: Point2(x: 40, y: 18),
+                          lowerRear: Point2(x: 0, y: 10), lowerFront: Point2(x: 36, y: 11))
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val setup = SuspensionSetup.fourLink(
+    wheelbase = 106.0, cgHeight = 21.0,
+    upperRear = Point2(4.0, 21.0), upperFront = Point2(30.0, 18.0),
+    lowerRear = Point2(2.0, 9.0), lowerFront = Point2(30.0, 11.0),
+)
+
+val g = setup.geometry()
+g.icLength       // polegadas à frente do eixo
+g.icHeight       // polegadas acima do chão
+g.antiSquat      // %
+g.bars           // ângulo e comprimento de cada barra
+g.warnings       // parallelLinks, instantCenterBehindAxle…
+
+// As outras suspensões
+SuspensionSetup.ladderBar(wheelbase = 106.0, cgHeight = 21.0, pivot = Point2(48.0, 10.0))
+SuspensionSetup.torqueArm(wheelbase = 106.0, cgHeight = 21.0, armFront = Point2(40.0, 18.0),
+                          lowerRear = Point2(0.0, 10.0), lowerFront = Point2(36.0, 11.0))
+```
+
+</TabItem>
+</Tabs>
+
+| Aviso | O que significa |
+| --- | --- |
+| `incomplete` | Faltam pontos para esse tipo de suspensão. |
+| `parallelLinks` | As barras são paralelas: o IC está no infinito. |
+| `instantCenterBehindAxle` | O IC ficou no eixo ou atrás dele: não há anti-squat. |
+| `instantCenterBelowGround` | O IC ficou abaixo do chão. |
+
+## Quais furos testar
+
+Os suportes de um 4-link têm vários furos. Com uma **janela-alvo** (as faixas que você busca) e os furos disponíveis, o TorkeKit testa todas as combinações e ordena da mais próxima para a mais distante:
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+let target = TargetWindow(
+    icLength: ValueRange(60, 75),
+    icHeight: ValueRange(8, 12),
+    antiSquat: ValueRange(80, 110)
+)
+let holes = FourLinkHoles(
+    upperRear: [Point2(x: 4, y: 19), Point2(x: 4, y: 21), Point2(x: 4, y: 23)],
+    upperFront: [Point2(x: 30, y: 18)],
+    lowerRear: [Point2(x: 2, y: 8), Point2(x: 2, y: 9)],
+    lowerFront: [Point2(x: 30, y: 11)]
+)
+
+for option in holes.ranked(base: setup, target: target).prefix(3) {
+    print(option.holes, option.geometry.antiSquat!, option.score)
+}
+target.status(.antiSquat, of: setup.geometry())   // .inside, .near, .below ou .above
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val target = TargetWindow(
+    icLength = ValueRange(60.0, 75.0),
+    icHeight = ValueRange(8.0, 12.0),
+    antiSquat = ValueRange(80.0, 110.0),
+)
+val holes = FourLinkHoles(
+    upperRear = listOf(Point2(4.0, 19.0), Point2(4.0, 21.0), Point2(4.0, 23.0)),
+    upperFront = listOf(Point2(30.0, 18.0)),
+    lowerRear = listOf(Point2(2.0, 8.0), Point2(2.0, 9.0)),
+    lowerFront = listOf(Point2(30.0, 11.0)),
+)
+
+holes.ranked(setup, target).take(3).forEach { option ->
+    println("${option.holes} ${option.geometry.antiSquat} ${option.score}")
+}
+target.status(TargetWindow.Metric.antiSquat, setup.geometry())   // inside, near, below ou above
+```
+
+</TabItem>
+</Tabs>
+
+`holes` diz qual furo de cada lista usar (na ordem `upperRear`, `upperFront`, `lowerRear`, `lowerFront`). Uma pontuação 0 significa que cai dentro de todas as faixas.
+
+<Aside type="caution" title="Os valores-alvo são seus">
+O TorkeKit não traz valores recomendados de nenhum fabricante nem de nenhum piloto. Eles dependem do carro, do pneu, da potência e da pista: defina você mesmo, ou deixe os seus usuários definirem.
+</Aside>
+
+## Comparar uma mudança com a arrancada
+
+Salve a suspensão junto com cada arrancada (o formato `torke.run` tem um campo `suspension`) e mostre o que mudou ao lado do tempo de 60 pés:
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+let change = SetupChange(from: before, to: after)
+change.antiSquat     // +12.5 (pontos percentuais)
+change.icLength      // -3.0 polegadas
+change.moved         // ["upperRear": Point2(x: 0, y: 2)]
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val change = SetupChange.between(before, after)
+change.antiSquat     // +12.5 (pontos percentuais)
+change.icLength      // -3.0 polegadas
+change.moved         // {upperRear=Point2(x=0.0, y=2.0)}
+```
+
+</TabItem>
+</Tabs>
+
+Assim o usuário vê, por exemplo, “você subiu o furo de cima 2 polegadas: anti-squat +12 %, 60 pés −0,04 s”.

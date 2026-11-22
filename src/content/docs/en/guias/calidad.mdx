@@ -1,0 +1,100 @@
+---
+title: Run quality
+description: Every run gets a grade (good, fair or poor) with the reasons. What TorkeKit checks, how the grade is decided and how to show it.
+---
+
+import { TabItem, Tabs, Aside } from '@astrojs/starlight/components';
+
+A phone is not a dragstrip timer. If the GPS dropped out, the mount moved or the strip has a slope, the time may be off. `RunQuality` checks the run and gives it a **grade with the reasons**, so your app knows how much to trust the number.
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+guard let quality = run.quality() else { return }   // nil without a standing start
+
+switch quality.grade {
+case .good: badge = "Reliable"
+case .fair: badge = "Check: \(quality.issues.map(\.rawValue).joined(separator: ", "))"
+case .poor: badge = "Doesn't count for the leaderboard"
+}
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val quality = run.quality() ?: return   // null without a standing start
+
+badge = when (quality.grade) {
+    RunQuality.Grade.good -> "Reliable"
+    RunQuality.Grade.fair -> "Check: ${quality.issues.joinToString()}"
+    RunQuality.Grade.poor -> "Doesn't count for the leaderboard"
+}
+```
+
+</TabItem>
+</Tabs>
+
+## What it checks
+
+| Issue | What happened | Limit | What to tell the user |
+| --- | --- | --- | --- |
+| `slowGPS` | Fewer than one GPS fix per second | 0.8 per s | “The GPS was slow. Try under open sky.” |
+| `inaccurateGPS` | The GPS speed was imprecise | 1.0 m/s | “Weak GPS signal.” |
+| `gpsDropout` | The GPS went silent for a while | 2.5 s | “The GPS dropped out during the run.” |
+| `slope` | The strip goes up or down | 1 % | “The strip has a slope: the time isn't comparable.” |
+| `looseMount` | The accelerometer ended with a large bias | 0.5 m/s² | “Check the mount: it looks loose or very tilted.” |
+| `phoneMoved` | The phone changed its angle | 8° | “The phone moved in its mount.” |
+| `sensorsDisagree` | Accelerometer and GPS tell different speeds | 1.5 m/s | “The sensors don't agree.” |
+
+The slope is only checked when the GPS samples carry altitude (recorded runs have it since version 0.2).
+
+## How the grade is decided
+
+- **Good:** no issues.
+- **Fair:** one or two minor issues (`slowGPS`, `inaccurateGPS`, `slope`, `looseMount`).
+- **Poor:** any serious issue (`gpsDropout`, `phoneMoved`, `sensorsDisagree`) or three issues or more.
+
+## The numbers behind it
+
+Besides the grade, `RunQuality` carries what it measured, in case you want to show it or use your own criteria:
+
+| Field | What it is |
+| --- | --- |
+| `gpsRate` | GPS fixes per second during the run. |
+| `speedAccuracy` | Median GPS speed accuracy, m/s. |
+| `longestGpsGap` | The longest stretch without GPS, in seconds. |
+| `slope` | Slope of the strip (positive is uphill). |
+| `tiltChange` | How much the phone's angle changed, in degrees. |
+| `disagreement` | RMS difference between the filtered speed and the GPS speed, m/s. |
+
+## Your own limits
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+var limits = RunQuality.Limits()
+limits.maxSlope = 0.005          // stricter: 0.5 %
+limits.minGpsRate = 4            // require a 5 Hz or faster external GPS
+let quality = RunQuality.assess(run, limits: limits)
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val limits = RunQuality.Limits(
+    maxSlope = 0.005,            // stricter: 0.5 %
+    minGpsRate = 4.0,            // require a 5 Hz or faster external GPS
+)
+val quality = RunQuality.assess(run, limits)
+```
+
+</TabItem>
+</Tabs>
+
+<Aside type="tip" title="For a leaderboard">
+A reasonable rule: only **good** runs made at an approved track or event count (check `startLocation`). Compute the grade again on your server from the recording; don't trust the one the app sends.
+</Aside>

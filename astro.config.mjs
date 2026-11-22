@@ -37,6 +37,8 @@ export default defineConfig({
 			defaultLocale: 'root',
 			locales: {
 				root: { label: 'Español', lang: 'es' },
+				en: { label: 'English', lang: 'en' },
+				pt: { label: 'Português', lang: 'pt-BR' },
 			},
 			logo: {
 				light: './src/assets/logo-light.svg',
@@ -58,37 +60,37 @@ export default defineConfig({
 			// sincronizadas en todo el sitio.
 			sidebar: [
 				{
-					label: 'Empezar',
+					label: 'Empezar', translations: { en: 'Get started', 'pt-BR': 'Começar' },
 					items: [
-						{ label: 'Qué es TorkeKit', slug: 'empezar/introduccion' },
-						{ label: 'Instalación', slug: 'empezar/instalacion' },
-						{ label: 'Tu primera corrida', slug: 'empezar/primera-corrida' },
+						{ label: 'Qué es TorkeKit', translations: { en: 'What is TorkeKit', 'pt-BR': 'O que é o TorkeKit' }, slug: 'empezar/introduccion' },
+						{ label: 'Instalación', translations: { en: 'Installation', 'pt-BR': 'Instalação' }, slug: 'empezar/instalacion' },
+						{ label: 'Tu primera corrida', translations: { en: 'Your first run', 'pt-BR': 'Sua primeira arrancada' }, slug: 'empezar/primera-corrida' },
 					],
 				},
 				{
-					label: 'Guías',
+					label: 'Guías', translations: { en: 'Guides', 'pt-BR': 'Guias' },
 					items: [
-						{ label: 'La sesión en vivo', slug: 'guias/sesion' },
-						{ label: 'Corridas grabadas', slug: 'guias/corridas-grabadas' },
-						{ label: 'Más mediciones', slug: 'guias/mediciones' },
-						{ label: 'Clima y potencia', slug: 'guias/clima-y-potencia' },
-						{ label: 'Calidad de la corrida', slug: 'guias/calidad' },
-						{ label: 'Suspensión', slug: 'guias/suspension', badge: { text: 'Lab', variant: 'success' } },
+						{ label: 'La sesión en vivo', translations: { en: 'The live session', 'pt-BR': 'A sessão ao vivo' }, slug: 'guias/sesion' },
+						{ label: 'Corridas grabadas', translations: { en: 'Recorded runs', 'pt-BR': 'Arrancadas gravadas' }, slug: 'guias/corridas-grabadas' },
+						{ label: 'Más mediciones', translations: { en: 'More measurements', 'pt-BR': 'Mais medições' }, slug: 'guias/mediciones' },
+						{ label: 'Clima y potencia', translations: { en: 'Weather and power', 'pt-BR': 'Clima e potência' }, slug: 'guias/clima-y-potencia' },
+						{ label: 'Calidad de la corrida', translations: { en: 'Run quality', 'pt-BR': 'Qualidade da arrancada' }, slug: 'guias/calidad' },
+						{ label: 'Suspensión', translations: { en: 'Suspension', 'pt-BR': 'Suspensão' }, slug: 'guias/suspension', badge: { text: 'Lab', variant: 'success' } },
 					],
 				},
 				{
-					label: 'Conceptos',
+					label: 'Conceptos', translations: { en: 'Concepts', 'pt-BR': 'Conceitos' },
 					items: [
-						{ label: 'Cómo funciona', slug: 'conceptos/como-funciona' },
-						{ label: 'Precisión', slug: 'conceptos/precision' },
+						{ label: 'Cómo funciona', translations: { en: 'How it works', 'pt-BR': 'Como funciona' }, slug: 'conceptos/como-funciona' },
+						{ label: 'Precisión', translations: { en: 'Accuracy', 'pt-BR': 'Precisão' }, slug: 'conceptos/precision' },
 					],
 				},
 				{
-					label: 'Referencia',
+					label: 'Referencia', translations: { en: 'Reference', 'pt-BR': 'Referência' },
 					items: [
 						{ label: 'API', slug: 'referencia/api' },
-						{ label: 'Formato torke.run', slug: 'referencia/formato' },
-						{ label: 'Versiones', slug: 'referencia/versiones' },
+						{ label: 'Formato torke.run', translations: { en: 'torke.run format', 'pt-BR': 'Formato torke.run' }, slug: 'referencia/formato' },
+						{ label: 'Versiones', translations: { en: 'Releases', 'pt-BR': 'Versões' }, slug: 'referencia/versiones' },
 						{ label: 'Roadmap', slug: 'referencia/roadmap' },
 					],
 				},

@@ -1,0 +1,105 @@
+---
+title: More measurements
+description: 0–60 mph, 1000 ft, half mile, speed ranges, custom distances, launch g, and the rolling and braking modes.
+---
+
+import { TabItem, Tabs, Aside } from '@astrojs/starlight/components';
+
+Besides the classic marks, the result carries the whole run (speed and distance over time), so you can read **any mark** after the run.
+
+## Standing-start marks
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+let r = run.analyze(stopDistance: 850)!      // read past the quarter mile
+r.zeroTo60mph                                 // 0–60 mph
+r.thousandFeet                                // 1000 ft
+r.halfMile                                    // half mile
+r.time(fromKmh: 100, toKmh: 200)              // speed range
+r.time(toKmh: 150)                            // 0–150 km/h
+r.elapsed(toDistance: 100)                    // 100 meters, with rollout
+r.speedKmh(atDistance: 300)                   // speed at 300 m
+r.launchG; r.peakG                            // launch and peak g
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val r = run.analyze(stopDistance = 850.0)!!   // read past the quarter mile
+r.zeroTo60mph                                 // 0–60 mph
+r.thousandFeet                                // 1000 ft
+r.halfMile                                    // half mile
+r.time(fromKmh = 100.0, toKmh = 200.0)        // speed range
+r.time(toKmh = 150.0)                         // 0–150 km/h
+r.elapsed(toDistance = 100.0)                 // 100 meters, with rollout
+r.speedKmh(atDistance = 300.0)                // speed at 300 m
+r.launchG; r.peakG                            // launch and peak g
+```
+
+</TabItem>
+</Tabs>
+
+They all return null if the run didn't reach that mark.
+
+| Mark | Distance or speed |
+| --- | --- |
+| 60 ft | 18.288 m |
+| 1/8 mile | 201.168 m |
+| 1000 ft | 304.8 m |
+| 1/4 mile | 402.336 m |
+| 1/2 mile | 804.672 m |
+| 0–60 mph | 26.82 m/s |
+
+<Aside type="note" title="Rollout">
+At the track, the timer starts when the front tire leaves the staging beam, almost one foot (30.48 cm) after the car started moving. TorkeKit discounts that foot from every distance mark, so your times compare with the timeslip.
+</Aside>
+
+## Rolling and braking
+
+To time a range with the car already moving, arm the session in another mode. It starts recording right away and finishes by itself once the range is covered.
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+session.arm(mode: .rolling(fromKmh: 60, toKmh: 130))   // passing
+session.arm(mode: .braking(fromKmh: 100))              // braking
+
+for await event in session.events() {
+    if case .intervalFinished(let interval) = event {
+        print("\(interval.time) s over \(interval.distance) m, \(interval.peakG) g")
+    }
+}
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+session.arm(RunMode.Rolling(60.0, 130.0))   // passing
+session.arm(RunMode.Braking(100.0))         // braking
+
+session.events.collect { event ->
+    if (event is RunEvent.IntervalFinished) {
+        val i = event.result
+        println("${i.time} s over ${i.distance} m, ${i.peakG} g")
+    }
+}
+```
+
+</TabItem>
+</Tabs>
+
+| `IntervalResult` field | What it is |
+| --- | --- |
+| `kind` | `rolling` or `braking`. |
+| `fromKmh`, `toKmh` | The requested range. |
+| `time` | Seconds it took. |
+| `distance` | Meters covered in the range. |
+| `peakG` | Peak g (acceleration or braking). |
+| `startTime` | When it started, on the samples' clock. |
+
+If the car doesn't cover the range (say it never reaches 130), the session fails with `noInterval`. With a recording you can also compute the range later: `run.rolling(fromKmh:toKmh:)` and `run.braking(fromKmh:)`.

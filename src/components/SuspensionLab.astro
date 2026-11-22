@@ -2,16 +2,45 @@
 // Laboratorio de 4-link: arrastrá los cuatro puntos de montaje y mirá el centro instantáneo y el
 // anti-squat. Mismas fórmulas que SuspensionGeometry en TorkeKit. Medidas en pulgadas: x hacia
 // adelante desde el eje trasero, y hacia arriba desde el piso.
+import { langOf, numberLocale } from './i18n';
+
+const lang = langOf(Astro.url);
+const t = {
+	es: { title: 'Laboratorio 4-link', hint: 'Arrastrá los puntos verdes', reset: 'Restablecer', aria: 'Vista lateral de una suspensión 4-link con el centro instantáneo',
+		icl: 'IC largo', ich: 'IC alto', as: 'Anti-squat', ang: 'Ángulo sup. / inf.', cg: 'Altura del CG',
+		behind: 'El centro instantáneo quedó detrás del eje: las barras convergen hacia atrás.',
+		below: 'El centro instantáneo quedó bajo el piso.',
+		off: 'El centro instantáneo quedó fuera del dibujo: las barras son casi paralelas.',
+		parallel: 'Las barras son paralelas: el centro instantáneo está en el infinito.',
+		over: 'Más de 100 %: al acelerar, la suspensión empuja la carrocería hacia arriba atrás (la cola sube).',
+		under: 'Menos de 100 %: al acelerar, la cola se sienta (squat).' },
+	en: { title: '4-link lab', hint: 'Drag the green points', reset: 'Reset', aria: 'Side view of a 4-link suspension with its instant center',
+		icl: 'IC length', ich: 'IC height', as: 'Anti-squat', ang: 'Upper / lower angle', cg: 'CG height',
+		behind: 'The instant center is behind the axle: the links converge rearward.',
+		below: 'The instant center is below the ground.',
+		off: 'The instant center is off the drawing: the links are almost parallel.',
+		parallel: 'The links are parallel: the instant center is at infinity.',
+		over: 'Over 100 %: under acceleration the suspension pushes the rear of the body up (the tail rises).',
+		under: 'Under 100 %: under acceleration the rear squats.' },
+	pt: { title: 'Laboratório 4-link', hint: 'Arraste os pontos verdes', reset: 'Restaurar', aria: 'Vista lateral de uma suspensão 4-link com o centro instantâneo',
+		icl: 'IC comprimento', ich: 'IC altura', as: 'Anti-squat', ang: 'Ângulo sup. / inf.', cg: 'Altura do CG',
+		behind: 'O centro instantâneo ficou atrás do eixo: as barras convergem para trás.',
+		below: 'O centro instantâneo ficou abaixo do chão.',
+		off: 'O centro instantâneo ficou fora do desenho: as barras estão quase paralelas.',
+		parallel: 'As barras são paralelas: o centro instantâneo está no infinito.',
+		over: 'Acima de 100 %: ao acelerar, a suspensão empurra a traseira da carroceria para cima (a traseira sobe).',
+		under: 'Abaixo de 100 %: ao acelerar, a traseira agacha (squat).' },
+}[lang];
 ---
 
-<div class="tk-lab not-content" data-suspension id="laboratorio-4link">
+<div class="tk-lab not-content" data-suspension id="laboratorio-4link" data-locale={numberLocale[lang]} data-copy={JSON.stringify(t)}>
 	<div class="tk-lab-head">
-		<b>Laboratorio 4-link</b>
-		<small>Arrastrá los puntos verdes</small>
-		<button type="button" data-reset>Restablecer</button>
+		<b>{t.title}</b>
+		<small>{t.hint}</small>
+		<button type="button" data-reset>{t.reset}</button>
 	</div>
 	<div class="tk-stage-svg">
-		<svg viewBox="0 0 820 300" role="img" aria-label="Vista lateral de una suspensión 4-link con el centro instantáneo">
+		<svg viewBox="0 0 820 300" role="img" aria-label={t.aria}>
 			<defs>
 				<pattern id="tk-grid" width="25" height="25" patternUnits="userSpaceOnUse">
 					<circle cx="1" cy="1" r="1" fill="var(--sl-color-gray-5)" />
@@ -55,14 +84,14 @@
 		</svg>
 	</div>
 	<div class="tk-readouts">
-		<div class="tk-readout" data-r="icl"><small>IC largo</small><strong></strong></div>
-		<div class="tk-readout" data-r="ich"><small>IC alto</small><strong></strong></div>
-		<div class="tk-readout" data-r="as"><small>Anti-squat</small><strong></strong></div>
-		<div class="tk-readout tk-readout-sm" data-r="ang"><small>Ángulo sup. / inf.</small><strong></strong></div>
+		<div class="tk-readout" data-r="icl"><small>{t.icl}</small><strong></strong></div>
+		<div class="tk-readout" data-r="ich"><small>{t.ich}</small><strong></strong></div>
+		<div class="tk-readout" data-r="as"><small>{t.as}</small><strong></strong></div>
+		<div class="tk-readout tk-readout-sm" data-r="ang"><small>{t.ang}</small><strong></strong></div>
 	</div>
 	<div class="tk-sliders">
 		<div class="tk-slider">
-			<label for="tk-cg">Altura del CG</label>
+			<label for="tk-cg">{t.cg}</label>
 			<input id="tk-cg" type="range" min="14" max="30" step="0.5" value="21" data-cg-input />
 			<output data-o="cg"></output>
 		</div>
@@ -104,12 +133,13 @@
 		return { x: a1.x + t * d1.x, y: a1.y + t * d1.y };
 	}
 	const angle = (r: P, f: P) => (Math.atan2(f.y - r.y, f.x - r.x) * 180) / Math.PI;
-	const f1 = (n: number) => n.toLocaleString('es-CR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 	followPlatform();
 
 	for (const root of document.querySelectorAll<HTMLElement>('[data-suspension]')) {
 		const svg = root.querySelector('svg')!;
+		const copy = JSON.parse(root.dataset.copy!);
+		const f1 = (n: number) => n.toLocaleString(root.dataset.locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 		const q = <T extends Element>(s: string) => root.querySelector<T>(s)!;
 		const set = (el: Element, attrs: Record<string, number | string>) => {
 			for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
@@ -146,15 +176,15 @@
 			let antiSquat: number | null = null;
 			const icEl = q<SVGGElement>('[data-ic]');
 			if (ic) {
-				if (ic.x <= 0) notes.push('El centro instantáneo quedó detrás del eje: las barras convergen hacia atrás.');
-				if (ic.y < 0) notes.push('El centro instantáneo quedó bajo el piso.');
+				if (ic.x <= 0) notes.push(copy.behind);
+				if (ic.y < 0) notes.push(copy.below);
 				if (ic.x > 0 && cg > 0) antiSquat = (ic.y / ic.x / (cg / WHEELBASE)) * 100;
 				const onScreen = ic.x > -12 && ic.x < 146 && ic.y > -4 && ic.y < 54;
 				icEl.style.display = onScreen ? '' : 'none';
 				icEl.setAttribute('transform', `translate(${X(ic.x)} ${Y(ic.y)})`);
 				set(q('[data-extU]'), { x1: X(uf.x), y1: Y(uf.y), x2: X(ic.x), y2: Y(ic.y) });
 				set(q('[data-extL]'), { x1: X(lf.x), y1: Y(lf.y), x2: X(ic.x), y2: Y(ic.y) });
-				if (!onScreen) notes.push('El centro instantáneo quedó fuera del dibujo: las barras son casi paralelas.');
+				if (!onScreen) notes.push(copy.off);
 				// Línea de anti-squat: del contacto de la llanta, pasando por el IC, hasta el eje delantero.
 				if (ic.x > 0) {
 					const yAtFront = (ic.y / ic.x) * WHEELBASE;
@@ -162,7 +192,7 @@
 				}
 			} else {
 				icEl.style.display = 'none';
-				notes.push('Las barras son paralelas: el centro instantáneo está en el infinito.');
+				notes.push(copy.parallel);
 			}
 			q<SVGLineElement>('[data-lineAS]').style.display = antiSquat == null ? 'none' : '';
 			for (const k of ['extU', 'extL']) q<SVGLineElement>(`[data-${k}]`).style.display = ic ? '' : 'none';
@@ -179,8 +209,8 @@
 			if (antiSquat != null && !notes.length) {
 				notes.push(
 					antiSquat > 100
-						? 'Más de 100 %: al acelerar, la suspensión empuja la carrocería hacia arriba atrás (la cola sube).'
-						: 'Menos de 100 %: al acelerar, la cola se sienta (squat).',
+						? copy.over
+						: copy.under,
 				);
 			}
 			const note = q('[data-note]');

@@ -1,0 +1,135 @@
+---
+title: Recorded runs
+description: Save each run in the torke.run format, analyze it again on another platform or on your server, and replay it in tests.
+---
+
+import { TabItem, Tabs, Aside, CardGrid, Card } from '@astrojs/starlight/components';
+
+Every run can be saved with **all its raw samples** (accelerometer and GPS) plus the result. With that you can compute the times again whenever you want: on another phone, on your server or in an automated test.
+
+## Saving
+
+When `finished` arrives, ask the session for the recording and turn it into JSON:
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+let run = session.recording(device: "iPhone16,1", app: "MyApp 1.0")
+let data = try run.encoded()            // the torke.run JSON
+try data.write(to: url)
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val run = session.recording(device = Build.MODEL, app = "MyApp 1.0")
+val json = run.encode()                 // the torke.run JSON
+file.writeText(json)
+```
+
+</TabItem>
+</Tabs>
+
+A quarter-mile run weighs about 200 KB. Use the `.torkerun.json` extension.
+
+## Analyzing again
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+let run = try TorkeRun.decode(data)
+let result = run.analyze()              // the times again
+let start = run.startLocation           // where it launched
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val run = TorkeRun.decode(json)
+val result = run.analyze()              // the times again
+val start = run.startLocation           // where it launched
+```
+
+</TabItem>
+</Tabs>
+
+<Aside type="tip" title="On your server">
+The Android `torke-kit` module has no Android code: add it to a Kotlin or Java server and compute the times again for every run uploaded to you. That way your leaderboard doesn't depend on the number the phone sent.
+</Aside>
+
+## Replaying
+
+`RecordedRunProvider` feeds a recorded run to a session as if it were the sensors. It's for tests, demos and reproducing a bug someone reported.
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+let session = RunSession()
+session.arm()
+await session.run(with: RecordedRunProvider(run))                 // as fast as possible
+session.start(with: RecordedRunProvider(run, speed: 1))           // in real time, for a demo
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val session = RunSession()
+session.arm()
+session.run(RecordedRunProvider(run))                             // as fast as possible
+session.start(RecordedRunProvider(run, speed = 1.0), scope)       // in real time, for a demo
+```
+
+</TabItem>
+</Tabs>
+
+## Automated tests
+
+The simulated run (`RecordedRunProvider.demo()`) always gives the same numbers. Use it to pin your app's behavior:
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+func testDemoRun() async throws {
+    let session = RunSession()
+    session.arm()
+    await session.run(with: RecordedRunProvider.demo())
+    let r = try XCTUnwrap(session.snapshot.result)
+    XCTAssertEqual(r.quarterMile!, 12.826, accuracy: 0.001)
+}
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+@Test fun demoRun() = runTest {
+    val session = RunSession()
+    session.arm()
+    session.run(RecordedRunProvider.demo())
+    val r = session.snapshot.value.result!!
+    assertEquals(12.826, r.quarterMile!!, 0.001)
+}
+```
+
+</TabItem>
+</Tabs>
+
+## Reference files
+
+The repositories ship sample runs in `Fixtures/`. Both platforms read them in their tests and must get the same numbers:
+
+<CardGrid>
+	<Card title="demo-42.torkerun.json">The simulated car. Times equal to half a millisecond.</Card>
+	<Card title="launch.torkerun.json">A launch with altitudes, weather and a 4-link.</Card>
+	<Card title="rolling / braking">A 60–130 km/h rolling run and a 100–0 stop.</Card>
+	<Card title="phase2-expected.json">The expected results for weather, suspension, quality and power.</Card>
+</CardGrid>
+
+Every field is described in [torke.run format](/en/referencia/formato/).

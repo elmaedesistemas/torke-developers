@@ -23,7 +23,6 @@ Quedó para después: la migración del centro instantáneo con el recorrido de 
 - **Arbolito:** Pro (.400) y Sportsman (.500), tiempo de reacción y luz roja.
 - **Cronómetro de vueltas** para circuitos: línea de meta, sectores y vuelta proyectada.
 - **Geocercas** para pistas y eventos.
-- Esta documentación en inglés y portugués.
 
 ## Fuera del SDK
 

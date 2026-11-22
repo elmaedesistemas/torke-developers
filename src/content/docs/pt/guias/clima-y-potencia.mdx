@@ -1,0 +1,103 @@
+---
+title: Clima e potência
+description: Corrija os tempos para o ar padrão com SAE J1349, calcule a altitude de densidade e estime os cavalos do carro pela velocidade final.
+---
+
+import { TabItem, Tabs, Aside } from '@astrojs/starlight/components';
+import WeatherLab from '../../../../components/WeatherLab.astro';
+
+O mesmo carro é mais lento em um dia quente e úmido, ou em uma pista alta: o ar é menos denso e o motor rende menos. Para comparar arrancadas de dias diferentes, o TorkeKit **corrige os tempos para o ar padrão** (25 °C, 990 hPa de ar seco, a norma SAE J1349).
+
+## Teste
+
+<WeatherLab />
+
+Mexa no clima e veja como a arrancada demo muda. Com 31 °C, 70 % de umidade e 910 hPa (uma tarde em uma pista a uns 900 m de altitude) o ar se comporta como se você estivesse a quase 1.800 m, e o carro perde 14 % da potência: a arrancada demo cairia de 12,826 para 12,196 s no ar padrão.
+
+## No código
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+let weather = Weather(temperatureC: 31, humidity: 70, pressureHpa: 910)
+
+weather.densityAltitude          // metros: mais alto = ar mais rarefeito
+weather.airDensity               // kg/m³
+weather.correctionFactor         // acima de 1: o ar custou potência
+
+let corrected = result.corrected(for: weather)
+corrected.quarterMile            // o 1/4 no ar padrão
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val weather = Weather(temperatureC = 31.0, humidity = 70.0, pressureHpa = 910.0)
+
+weather.densityAltitude          // metros: mais alto = ar mais rarefeito
+weather.airDensity               // kg/m³
+weather.correctionFactor         // acima de 1: o ar custou potência
+
+val corrected = result.corrected(weather)
+corrected.quarterMile            // o 1/4 no ar padrão
+```
+
+</TabItem>
+</Tabs>
+
+<Aside type="caution" title="Pressão da estação, não a da previsão">
+`pressureHpa` é a pressão **real na pista**. Os apps de clima costumam mostrar a pressão ao nível do mar, que em uma pista alta dá um valor bem diferente. Use um barômetro, o do celular (`CMAltimeter` no iOS, o sensor `TYPE_PRESSURE` no Android) ou uma estação meteorológica próxima.
+</Aside>
+
+Os tempos são corrigidos pela raiz cúbica da potência (`tempo × fator^-1/3`) e as velocidades ao contrário (`velocidade × fator^1/3`). O percurso (`trace`) fica como foi medido.
+
+## Potência estimada
+
+Com o peso do carro **com o piloto** e a velocidade final do quarto de milha, a fórmula de Hale dá uma boa estimativa dos cavalos no volante do motor:
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+// Velocidade final: a mais confiável
+PowerEstimate.fromTrapSpeed(massKg: 1350, quarterMileKmh: result.quarterMileKmh!)
+
+// Pelo tempo: lê baixo se o carro patina na largada
+PowerEstimate.fromElapsedTime(massKg: 1350, quarterMile: result.quarterMile!)
+
+// Potência nas rodas ao longo da arrancada
+let curve = PowerEstimate.wheelPower(result, massKg: 1350, dragArea: 0.6)
+let peak = PowerEstimate.peakWheelHp(result, massKg: 1350)
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+// Velocidade final: a mais confiável
+PowerEstimate.fromTrapSpeed(massKg = 1350.0, quarterMileKmh = result.quarterMileKmh!!)
+
+// Pelo tempo: lê baixo se o carro patina na largada
+PowerEstimate.fromElapsedTime(massKg = 1350.0, quarterMile = result.quarterMile!!)
+
+// Potência nas rodas ao longo da arrancada
+val curve = PowerEstimate.wheelPower(result, massKg = 1350.0, dragArea = 0.6)
+val peak = PowerEstimate.peakWheelHp(result, massKg = 1350.0)
+```
+
+</TabItem>
+</Tabs>
+
+`wheelPower` soma o que custou acelerar o carro, vencer o ar e a resistência dos pneus. Os parâmetros:
+
+| Parâmetro | Padrão | Valores típicos |
+| --- | --- | --- |
+| `dragArea` | 0,7 m² | Coeficiente de arrasto × área frontal. 0,6 um sedã, 0,8 uma picape. |
+| `rollingResistance` | 0,015 | 0,012 com pneus de arrancada, 0,015 de rua. |
+| `airDensity` | 1,2 kg/m³ | `weather.airDensity` se você tiver. |
+
+<Aside type="note">
+São aproximações de mais ou menos 15 %. Servem para **comparar mudanças no mesmo carro** (outro turbo, outro pneu), não para substituir um dinamômetro.
+</Aside>

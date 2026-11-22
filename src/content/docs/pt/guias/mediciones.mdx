@@ -1,0 +1,105 @@
+---
+title: Mais medições
+description: 0 a 60 mph, 1000 pés, meia milha, faixas de velocidade, distâncias próprias, g na largada, e os modos retomada e frenagem.
+---
+
+import { TabItem, Tabs, Aside } from '@astrojs/starlight/components';
+
+Além das marcas clássicas, o resultado traz todo o percurso (velocidade e distância no tempo), então você pode ler **qualquer marca** depois da arrancada.
+
+## Marcas de uma largada parada
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+let r = run.analyze(stopDistance: 850)!      // leia além do quarto de milha
+r.zeroTo60mph                                 // 0 a 60 mph
+r.thousandFeet                                // 1000 pés
+r.halfMile                                    // meia milha
+r.time(fromKmh: 100, toKmh: 200)              // faixa de velocidade
+r.time(toKmh: 150)                            // 0 a 150 km/h
+r.elapsed(toDistance: 100)                    // 100 metros, com rollout
+r.speedKmh(atDistance: 300)                   // velocidade aos 300 m
+r.launchG; r.peakG                            // g na largada e máximo
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+val r = run.analyze(stopDistance = 850.0)!!   // leia além do quarto de milha
+r.zeroTo60mph                                 // 0 a 60 mph
+r.thousandFeet                                // 1000 pés
+r.halfMile                                    // meia milha
+r.time(fromKmh = 100.0, toKmh = 200.0)        // faixa de velocidade
+r.time(toKmh = 150.0)                         // 0 a 150 km/h
+r.elapsed(toDistance = 100.0)                 // 100 metros, com rollout
+r.speedKmh(atDistance = 300.0)                // velocidade aos 300 m
+r.launchG; r.peakG                            // g na largada e máximo
+```
+
+</TabItem>
+</Tabs>
+
+Todas devolvem nulo se a arrancada não chegou àquela marca.
+
+| Marca | Distância ou velocidade |
+| --- | --- |
+| 60 pés | 18,288 m |
+| 1/8 de milha | 201,168 m |
+| 1000 pés | 304,8 m |
+| 1/4 de milha | 402,336 m |
+| 1/2 milha | 804,672 m |
+| 0 a 60 mph | 26,82 m/s |
+
+<Aside type="note" title="O rollout">
+Na pista, o cronômetro começa quando o pneu dianteiro sai do feixe de luz, quase um pé (30,48 cm) depois de o carro começar a se mover. O TorkeKit desconta esse pé em todas as marcas de distância, para que os seus tempos se comparem com os do ticket.
+</Aside>
+
+## Retomada e frenagem
+
+Para medir um trecho com o carro já em movimento, arme a sessão em outro modo. A gravação começa na hora e termina sozinha quando o trecho é coberto.
+
+<Tabs syncKey="platform">
+<TabItem label="Swift">
+
+```swift
+session.arm(mode: .rolling(fromKmh: 60, toKmh: 130))   // retomada
+session.arm(mode: .braking(fromKmh: 100))              // frenagem
+
+for await event in session.events() {
+    if case .intervalFinished(let interval) = event {
+        print("\(interval.time) s em \(interval.distance) m, \(interval.peakG) g")
+    }
+}
+```
+
+</TabItem>
+<TabItem label="Kotlin">
+
+```kotlin
+session.arm(RunMode.Rolling(60.0, 130.0))   // retomada
+session.arm(RunMode.Braking(100.0))         // frenagem
+
+session.events.collect { event ->
+    if (event is RunEvent.IntervalFinished) {
+        val i = event.result
+        println("${i.time} s em ${i.distance} m, ${i.peakG} g")
+    }
+}
+```
+
+</TabItem>
+</Tabs>
+
+| Campo de `IntervalResult` | O que é |
+| --- | --- |
+| `kind` | `rolling` ou `braking`. |
+| `fromKmh`, `toKmh` | O trecho pedido. |
+| `time` | Segundos que levou. |
+| `distance` | Metros percorridos no trecho. |
+| `peakG` | g máximo (aceleração ou frenagem). |
+| `startTime` | Quando começou, no relógio das amostras. |
+
+Se o carro não cobrir o trecho (por exemplo, não chegar a 130), a sessão falha com `noInterval`. Com uma gravação você também pode calcular o trecho depois: `run.rolling(fromKmh:toKmh:)` e `run.braking(fromKmh:)`.
